@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tomodachi.ai — Your AI Japan Travel Companion</title>
+  <meta name="description" content="An AI local friend who knows Japan deeply. Choose your travel vibe and get a personal Japan itinerary.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── Variables ─────────────────────────────────────────────── */
+    :root {
+      --bg-0:   #05050f;
+      --bg-1:   #09091a;
+      --bg-2:   #0e0e22;
+      --bg-3:   #141430;
+      --gold:        #c9a227;
+      --gold-light:  #e2ba35;
+      --gold-dim:    rgba(201, 162, 39, 0.12);
+      --gold-border: rgba(201, 162, 39, 0.22);
+      --gold-glow:   rgba(201, 162, 39, 0.08);
+      --text:   #ededf5;
+      --text-2: #9898b8;
+      --text-3: #55556a;
+      --serif: 'Noto Serif JP', 'Georgia', serif;
+      --sans:  'Inter', -apple-system, sans-serif;
+      --r:  12px;
+      --r-lg: 20px;
+      --ease: 0.25s ease;
+    }
+
+    /* ── Reset ──────────────────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-0);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Subtle dot-grid texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(201,162,39,0.05) 1px, transparent 1px);
+      background-size: 44px 44px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Ambient glow blobs */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 15% 20%, rgba(201,162,39,0.04) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 50% at 85% 80%, rgba(90,60,180,0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      position: relative;
+      padding: 28px 0;
+      border-bottom: 1px solid var(--gold-border);
+      overflow: hidden;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-kanji {
+      font-family: var(--serif);
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+      text-shadow: 0 0 30px rgba(201,162,39,0.4);
+    }
+
+    .logo-text { display: flex; flex-direction: column; gap: 2px; }
+
+    .logo-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .logo-name span { color: var(--gold); }
+
+    .logo-tagline {
+      font-size: 0.75rem;
+      color: var(--text-3);
+      letter-spacing: 0.04em;
+    }
+
+    .header-deco {
+      font-family: var(--serif);
+      font-size: 5rem;
+      font-weight: 700;
+      color: rgba(201,162,39,0.05);
+      user-select: none;
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    /* ── Section shared ─────────────────────────────────────────── */
+    .view { padding: 60px 0 80px; }
+
+    .section-header { text-align: center; margin-bottom: 48px; }
+
+    .section-eyebrow {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-family: var(--serif);
+      font-size: 2.6rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 14px;
+    }
+
+    .section-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-2);
+      max-width: 420px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ── Mood Grid ──────────────────────────────────────────────── */
+    .mood-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    /* Center 7th card when it's alone in bottom row */
+    .mood-card:nth-child(7) { grid-column: 2; }
+
+    .mood-card {
+      background: var(--bg-2);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--r-lg);
+      padding: 30px 22px 26px;
+      cursor: pointer;
+      transition: transform var(--ease), box-shadow var(--ease), border-color var(--ease), background var(--ease);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.5s ease backwards;
+    }
+
+    .mood-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--gold-glow) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity var(--ease);
+    }
+
+    .mood-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--gold);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 24px rgba(201,162,39,0.12);
+      background: var(--bg-3);
+    }
+
+    .mood-card:hover::before { opacity: 1; }
+
+    .mood-card:active { transform: translateY(-2px) scale(0.98); }
+
+    .mood-icon {
+      font-size: 2.6rem;
+      margin-bottom: 14px;
+      display: block;
+      line-height: 1;
+    }
+
+    .mood-name {
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .mood-tagline {
+      font-size: 0.8rem;
+      color: var(--text-3);
+      line-height: 1.4;
+    }
+
+    /* ── Loading ─────────────────────────────────────────────────── */
+    .loading-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+    }
+
+    .loading-rig {
+      position: relative;
+      width: 110px;
+      height: 110px;
+      margin-bottom: 36px;
+    }
+
+    .loading-ring {
+      position: absolute;
+      inset: 0;
+      border: 2px solid rgba(201,162,39,0.15);
+      border-top: 2px solid var(--gold);
+      border-radius: 50%;
+      animation: spin 1.4s linear infinite;
+    }
+
+    .loading-ring-inner {
+      position: absolute;
+      inset: 16px;
+      border: 2px solid rgba(201,162,39,0.08);
+      border-top: 2px solid var(--gold-light);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite reverse;
+    }
+
+    .loading-kanji {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--serif);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--gold);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .loading-title {
+      font-family: var(--serif);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .loading-sub {
+      font-size: 0.9rem;
+      color: var(--text-3);
+      max-width: 300px;
+      line-height: 1.6;
+    }
+
+    .loading-dots span {
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      background: var(--gold);
+      border-radius: 50%;
+      margin: 0 3px;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    /* ── Result ──────────────────────────────────────────────────── */
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: none;
+      border: 1px solid var(--gold-border);
+      color: var(--text-2);
+      padding: 9px 20px;
+      border-radius: 100px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-family: var(--sans);
+      transition: all var(--ease);
+      margin-bottom: 32px;
+    }
+
+    .back-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    .result-card {
+      background: var(--bg-1);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--r-lg);
+      padding: 48px;
+      animation: fadeUp 0.5s ease forwards;
+    }
+
+    .result-header { margin-bottom: 8px; }
+
+    .result-badge {
+      display: inline-block;
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-border);
+      color: var(--gold);
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 16px;
+    }
+
+    .result-mood-title {
+      font-family: var(--serif);
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.15;
+      margin-bottom: 32px;
+    }
+
+    /* Feels section */
+    .feels-section {
+      background: linear-gradient(135deg, rgba(201,162,39,0.07) 0%, rgba(201,162,39,0.02) 100%);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 var(--r) var(--r) 0;
+      padding: 28px 32px;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .feels-quote-mark {
+      font-family: var(--serif);
+      font-size: 5rem;
+      line-height: 0;
+      vertical-align: -0.35em;
+      color: var(--gold);
+      opacity: 0.25;
+      margin-right: 4px;
+    }
+
+    .feels-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+
+    .feels-text {
+      font-style: italic;
+      font-size: 1.15rem;
+      line-height: 1.8;
+      color: var(--text);
+      font-family: var(--serif);
+      font-weight: 300;
+    }
+
+    /* Section blocks */
+    .result-block { margin-bottom: 36px; }
+
+    .block-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--gold);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .block-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--gold-border);
+    }
+
+    /* Two-column info grid */
+    .info-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+
+    /* Chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .chip {
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+    }
+
+    .chip-outline {
+      background: transparent;
+      border: 1px solid rgba(201,162,39,0.18);
+      color: var(--text-2);
+    }
+
+    /* Hidden spots */
+    .spots-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .spot-card {
+      background: var(--bg-2);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--r);
+      padding: 22px 18px;
+      transition: border-color var(--ease);
+    }
+
+    .spot-card:hover { border-color: var(--gold); }
+
+    .spot-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--gold-light);
+      margin-bottom: 10px;
+    }
+
+    .spot-desc {
+      font-size: 0.875rem;
+      color: var(--text-2);
+      line-height: 1.65;
+    }
+
+    /* Food */
+    .food-list { display: flex; flex-direction: column; gap: 0; }
+
+    .food-item {
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(201,162,39,0.08);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .food-item:last-child { border-bottom: none; }
+
+    .food-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .food-desc {
+      font-size: 0.875rem;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+
+    .food-tip {
+      font-size: 0.82rem;
+      color: var(--gold);
+      font-style: italic;
+    }
+
+    /* Budget */
+    .budget-card {
+      background: var(--bg-2);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--r);
+      padding: 24px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .budget-icon {
+      font-size: 1.8rem;
+      line-height: 1;
+      margin-top: 2px;
+    }
+
+    .budget-amount {
+      font-family: var(--serif);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 6px;
+      line-height: 1.2;
+    }
+
+    .budget-breakdown {
+      font-size: 0.875rem;
+      color: var(--text-2);
+      line-height: 1.65;
+    }
+
+    /* Tips & cultural notes */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+
+    .tip-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+
+    .tip-item {
+      font-size: 0.9rem;
+      color: var(--text-2);
+      line-height: 1.6;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .tip-item::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      color: var(--gold);
+      font-size: 0.75rem;
+      top: 3px;
+    }
+
+    /* Info text (best time) */
+    .info-text {
+      font-size: 0.925rem;
+      color: var(--text-2);
+      line-height: 1.7;
+    }
+
+    /* CTA */
+    .result-cta {
+      text-align: center;
+      margin-top: 44px;
+      padding-top: 36px;
+      border-top: 1px solid var(--gold-border);
+    }
+
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      color: #0a0806;
+      border: none;
+      padding: 15px 36px;
+      border-radius: 100px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: transform var(--ease), box-shadow var(--ease);
+      text-decoration: none;
+    }
+
+    .cta-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(201,162,39,0.4);
+    }
+
+    .cta-btn:active { transform: translateY(-1px); }
+
+    /* Error */
+    .error-card {
+      background: var(--bg-2);
+      border: 1px solid rgba(255,80,80,0.25);
+      border-radius: var(--r-lg);
+      padding: 56px 40px;
+      text-align: center;
+      animation: fadeUp 0.4s ease forwards;
+    }
+
+    .error-icon { font-size: 3rem; margin-bottom: 20px; }
+
+    .error-card h3 {
+      font-family: var(--serif);
+      font-size: 1.5rem;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    .error-card p {
+      color: var(--text-2);
+      font-size: 0.95rem;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--gold-border);
+      padding: 28px 0;
+      text-align: center;
+      color: var(--text-3);
+      font-size: 0.82rem;
+    }
+
+    footer .footer-jp {
+      font-family: var(--serif);
+      color: var(--gold);
+      opacity: 0.35;
+      display: block;
+      margin-top: 4px;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Animations ─────────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.55; transform: scale(0.92); }
+    }
+
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40%            { opacity: 1;   transform: scale(1); }
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .mood-grid { grid-template-columns: repeat(2, 1fr); }
+      .mood-card:nth-child(7) { grid-column: auto; }
+      .spots-grid { grid-template-columns: 1fr 1fr; }
+      .two-col { grid-template-columns: 1fr; gap: 24px; }
+      .section-title { font-size: 2rem; }
+    }
+
+    @media (max-width: 680px) {
+      .result-card { padding: 28px 20px; }
+      .result-mood-title { font-size: 2rem; }
+      .info-row { grid-template-columns: 1fr; }
+      .spots-grid { grid-template-columns: 1fr; }
+      .feels-section { padding: 20px; }
+      .feels-text { font-size: 1rem; }
+      .header-deco { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .mood-grid { grid-template-columns: 1fr; }
+      .section-title { font-size: 1.7rem; }
+      .budget-card { flex-direction: column; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ───────────────────────────────────────────────── -->
+  <header>
+    <div class="container">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-kanji">友達</div>
+          <div class="logo-text">
+            <div class="logo-name">Tomodachi<span>.ai</span></div>
+            <div class="logo-tagline">Your AI Local Friend in Japan</div>
+          </div>
+        </div>
+        <div class="header-deco" aria-hidden="true">日本</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main ─────────────────────────────────────────────────── -->
+  <main>
+
+    <!-- View 1: Mood Selector -->
+    <section id="view-selector" class="view">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-eyebrow">Travel Mood Mode</div>
+          <h1 class="section-title">Choose Your Travel Vibe</h1>
+          <p class="section-subtitle">Tell me your mood — I'll show you my Japan.</p>
+        </div>
+        <div class="mood-grid" id="mood-grid" role="list"></div>
+      </div>
+    </section>
+
+    <!-- View 2: Loading -->
+    <section id="view-loading" class="view hidden">
+      <div class="container">
+        <div class="loading-wrapper">
+          <div class="loading-rig">
+            <div class="loading-ring"></div>
+            <div class="loading-ring-inner"></div>
+            <div class="loading-kanji">友</div>
+          </div>
+          <p class="loading-title">Crafting your journey<span class="loading-dots"><span></span><span></span><span></span></span></p>
+          <p class="loading-sub">Your tomodachi is thinking about the perfect spots for you</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- View 3: Result -->
+    <section id="view-result" class="view hidden">
+      <div class="container">
+        <button class="back-btn" onclick="showSelector()">&#8592; Back to Moods</button>
+        <div id="result-content"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── Footer ───────────────────────────────────────────────── -->
+  <footer>
+    <div class="container">
+      Built with love for Japan lovers everywhere
+      <span class="footer-jp">旅は人生の宝 · Travel is life's treasure</span>
+    </div>
+  </footer>
+
+  <script>
+    const MOODS = [
+      { emoji: '⚡', name: 'Anime & Pop Culture',  tagline: 'Neon dreams & manga magic' },
+      { emoji: '🏮', name: 'Hidden Local Tokyo',    tagline: 'Where locals actually go' },
+      { emoji: '📻', name: 'Retro Showa Japan',     tagline: 'Nostalgia in every corner' },
+      { emoji: '🌙', name: 'Night Walk Romantic',   tagline: 'Tokyo after midnight' },
+      { emoji: '🎋', name: 'Quiet Aesthetic',        tagline: 'Stillness & wabi-sabi' },
+      { emoji: '🍜', name: 'Foodie Adventure',       tagline: 'Eat like a local' },
+      { emoji: '🌸', name: 'Nature Escape',          tagline: 'Mountains, forests & silence' },
+    ];
+
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = String(str ?? '');
+      return d.innerHTML;
+    }
+
+    function showView(id) {
+      ['view-selector', 'view-loading', 'view-result'].forEach(v =>
+        document.getElementById(v).classList.toggle('hidden', v !== id)
+      );
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showSelector() { showView('view-selector'); }
+
+    function renderMoodCards() {
+      const grid = document.getElementById('mood-grid');
+      grid.innerHTML = MOODS.map((m, i) => `
+        <div
+          class="mood-card"
+          role="listitem button"
+          tabindex="0"
+          aria-label="Select ${m.name} mood"
+          style="animation-delay:${i * 0.07}s"
+          onclick="selectMood('${m.name}')"
+          onkeydown="if(event.key==='Enter'||event.key===' ')selectMood('${m.name}')"
+        >
+          <span class="mood-icon">${m.emoji}</span>
+          <div class="mood-name">${m.name}</div>
+          <div class="mood-tagline">${m.tagline}</div>
+        </div>
+      `).join('');
+    }
+
+    async function selectMood(mood) {
+      showView('view-loading');
+
+      try {
+        const res = await fetch('/api/itinerary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mood }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+        if (!data.success) throw new Error(data.error || 'Unexpected response');
+
+        renderResult(data.itinerary);
+        showView('view-result');
+
+      } catch (err) {
+        renderError(err.message);
+        showView('view-result');
+      }
+    }
+
+    function renderResult(it) {
+      const chips = (arr, cls = '') =>
+        (arr || []).map(a => `<span class="chip ${cls}">${esc(a)}</span>`).join('');
+
+      const spots = (it.hidden_spots || []).map(s => `
+        <div class="spot-card">
+          <div class="spot-name">${esc(s.name)}</div>
+          <div class="spot-desc">${esc(s.description)}</div>
+        </div>
+      `).join('');
+
+      const foods = (it.food_recommendations || []).map(f => `
+        <div class="food-item">
+          <div class="food-name">${esc(f.name)}</div>
+          <div class="food-desc">${esc(f.description)}</div>
+          <div class="food-tip">&#128161; ${esc(f.tip)}</div>
+        </div>
+      `).join('');
+
+      const tips = (it.local_tips || []).map(t => `<li class="tip-item">${esc(t)}</li>`).join('');
+      const notes = (it.cultural_notes || []).map(n => `<li class="tip-item">${esc(n)}</li>`).join('');
+
+      const budget = it.estimated_budget || {};
+      const budgetAmount = budget.amount || budget.budget || '';
+
+      document.getElementById('result-content').innerHTML = `
+        <div class="result-card">
+
+          <div class="result-header">
+            <div class="result-badge">Your Japan Itinerary</div>
+            <h2 class="result-mood-title">${esc(it.mood_title || 'Your Japan Journey')}</h2>
+          </div>
+
+          <div class="feels-section">
+            <div class="feels-label">How Japan Feels</div>
+            <p class="feels-text"><span class="feels-quote-mark" aria-hidden="true">"</span>${esc(it.how_japan_feels)}</p>
+          </div>
+
+          <div class="info-row">
+            <div class="result-block">
+              <div class="block-label">&#127754; Recommended Areas</div>
+              <div class="chips">${chips(it.recommended_areas)}</div>
+            </div>
+            <div class="result-block">
+              <div class="block-label">&#128646; Train Lines</div>
+              <div class="chips">${chips(it.train_lines, 'chip-outline')}</div>
+            </div>
+          </div>
+
+          <div class="result-block">
+            <div class="block-label">&#128142; Hidden Spots</div>
+            <div class="spots-grid">${spots}</div>
+          </div>
+
+          <div class="result-block">
+            <div class="block-label">&#127800; Best Time to Visit</div>
+            <p class="info-text">${esc(it.best_time)}</p>
+          </div>
+
+          <div class="result-block">
+            <div class="block-label">&#127836; Food Recommendations</div>
+            <div class="food-list">${foods}</div>
+          </div>
+
+          <div class="result-block">
+            <div class="block-label">&#128180; Estimated Budget</div>
+            <div class="budget-card">
+              <div class="budget-icon">&#165;</div>
+              <div>
+                <div class="budget-amount">${esc(budgetAmount)}</div>
+                <div class="budget-breakdown">${esc(budget.breakdown)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div class="result-block">
+              <div class="block-label">&#128161; Local Tips</div>
+              <ul class="tip-list">${tips}</ul>
+            </div>
+            <div class="result-block">
+              <div class="block-label">&#127991; Cultural Notes</div>
+              <ul class="tip-list">${notes}</ul>
+            </div>
+          </div>
+
+          <div class="result-cta">
+            <button class="cta-btn" onclick="showSelector()">&#10024; Try Another Mood</button>
+          </div>
+
+        </div>
+      `;
+    }
+
+    function renderError(msg) {
+      document.getElementById('result-content').innerHTML = `
+        <div class="error-card">
+          <div class="error-icon">&#9888;&#65039;</div>
+          <h3>Something went wrong</h3>
+          <p>${esc(msg)}</p>
+          <button class="cta-btn" onclick="showSelector()">Try Again</button>
+        </div>
+      `;
+    }
+
+    renderMoodCards();
+  </script>
+</body>
+</html>
