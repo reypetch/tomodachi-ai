@@ -51,7 +51,7 @@ Required structure:
 
 function buildChatSystem(agent) {
   let extra = '';
-  if (agent && agent.hotels && agent.hotels.length)
+  if (agent && agent.hotels   && agent.hotels.length)
     extra += '\nHotel options available through your travel agent: ' + agent.hotels.map(h => h.name).join(', ');
   if (agent && agent.packages && agent.packages.length)
     extra += '\nTour packages available: ' + agent.packages.map(p => p.name).join(', ');
@@ -69,53 +69,63 @@ router.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
-// Public brand data (no auth needed — just name/logo/whatsapp)
-router.get('/api/brand/:slug', (req, res) => {
-  const agent = db.getAgentBySlug(req.params.slug);
-  if (!agent || agent.status !== 'active') return res.status(404).json({ error: 'Not found' });
-  res.json({ name: agent.name, logo: agent.logo, whatsapp: agent.whatsapp, slug: agent.slug });
+// Public brand data
+router.get('/api/brand/:slug', async (req, res) => {
+  try {
+    const agent = await db.getAgentBySlug(req.params.slug);
+    if (!agent || agent.status !== 'active') return res.status(404).json({ error: 'Not found' });
+    res.json({ name: agent.name, logo: agent.logo, whatsapp: agent.whatsapp, slug: agent.slug });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // /:agentSlug — client landing / register
-router.get('/:agentSlug', (req, res, next) => {
+router.get('/:agentSlug', async (req, res, next) => {
   if (['favicon.ico', 'robots.txt'].includes(req.params.agentSlug)) return next();
-  const agent = db.getAgentBySlug(req.params.agentSlug);
-  if (!agent || agent.status !== 'active') return next();
-  res.sendFile(path.join(__dirname, '..', 'views', 'client-register.html'));
+  try {
+    const agent = await db.getAgentBySlug(req.params.agentSlug);
+    if (!agent || agent.status !== 'active') return next();
+    res.sendFile(path.join(__dirname, '..', 'views', 'client-register.html'));
+  } catch { next(); }
 });
 
 // /:agentSlug/login
-router.get('/:agentSlug/login', (req, res, next) => {
-  const agent = db.getAgentBySlug(req.params.agentSlug);
-  if (!agent || agent.status !== 'active') return next();
-  res.sendFile(path.join(__dirname, '..', 'views', 'client-login.html'));
+router.get('/:agentSlug/login', async (req, res, next) => {
+  try {
+    const agent = await db.getAgentBySlug(req.params.agentSlug);
+    if (!agent || agent.status !== 'active') return next();
+    res.sendFile(path.join(__dirname, '..', 'views', 'client-login.html'));
+  } catch { next(); }
 });
 
 // /:agentSlug/app — protected white-label app
-router.get('/:agentSlug/app', requireActiveClient, (req, res, next) => {
-  const agent = db.getAgentBySlug(req.params.agentSlug);
-  if (!agent || agent.status !== 'active') return next();
-  res.sendFile(path.join(__dirname, '..', 'views', 'client-app.html'));
+router.get('/:agentSlug/app', requireActiveClient, async (req, res, next) => {
+  try {
+    const agent = await db.getAgentBySlug(req.params.agentSlug);
+    if (!agent || agent.status !== 'active') return next();
+    res.sendFile(path.join(__dirname, '..', 'views', 'client-app.html'));
+  } catch { next(); }
 });
 
 // /:agentSlug/success — Stripe payment return
 router.get('/:agentSlug/success', async (req, res, next) => {
   try {
-    const agent = db.getAgentBySlug(req.params.agentSlug);
+    const agent = await db.getAgentBySlug(req.params.agentSlug);
     if (!agent) return next();
     if (!process.env.STRIPE_SECRET_KEY) return res.redirect(`/${agent.slug}/app`);
 
     const stripe  = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
-    if (session.payment_status === 'paid') {
+    const stripeSession = await stripe.checkout.sessions.retrieve(req.query.session_id);
+    if (stripeSession.payment_status === 'paid') {
       const expiry = new Date(Date.now() + 30*24*60*60*1000);
-      db.updateClient(session.metadata.clientId, {
+      await db.updateClient(stripeSession.metadata.clientId, {
         status:             'active',
         subscriptionExpiry: expiry.toISOString().split('T')[0],
-        stripeCustomerId:   session.customer || null
+        stripeCustomerId:   stripeSession.customer || null
       });
-      req.session.clientId   = session.metadata.clientId;
-      req.session.agentSlug  = agent.slug;
+      req.session.clientId  = stripeSession.metadata.clientId;
+      req.session.agentSlug = agent.slug;
       return res.redirect(`/${agent.slug}/app`);
     }
     res.redirect(`/${agent.slug}?payment_failed=1`);
@@ -126,7 +136,7 @@ router.get('/:agentSlug/success', async (req, res, next) => {
 });
 
 // ── Stripe webhook (raw body registered in server.js) ─────────
-router.post('/api/stripe/webhook', (req, res) => {
+router.post('/api/stripe/webhook', async (req, res) => {
   if (!process.env.STRIPE_SECRET_KEY) return res.json({ received: true });
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
   let event;
@@ -143,7 +153,7 @@ router.post('/api/stripe/webhook', (req, res) => {
     const s = event.data.object;
     if (s.metadata && s.metadata.clientId) {
       const expiry = new Date(Date.now() + 30*24*60*60*1000);
-      db.updateClient(s.metadata.clientId, {
+      await db.updateClient(s.metadata.clientId, {
         status:             'active',
         subscriptionExpiry: expiry.toISOString().split('T')[0],
         stripeCustomerId:   s.customer || null
@@ -156,27 +166,27 @@ router.post('/api/stripe/webhook', (req, res) => {
 // ── Client register API ────────────────────────────────────────
 router.post('/api/client/:agentSlug/register', async (req, res) => {
   try {
-    const agent = db.getAgentBySlug(req.params.agentSlug);
+    const agent = await db.getAgentBySlug(req.params.agentSlug);
     if (!agent || agent.status !== 'active')
       return res.status(404).json({ error: 'Agent not found' });
 
     const { name, email, password } = req.body;
     if (!name || !email || !password)
       return res.status(400).json({ error: 'All fields required' });
-    if (db.getClientByEmail(email, agent.id))
-      return res.status(400).json({ error: 'Email already registered' });
+
+    const existing = await db.getClientByEmail(email, agent.id);
+    if (existing) return res.status(400).json({ error: 'Email already registered' });
 
     if (process.env.STRIPE_SECRET_KEY) {
-      const stripe   = require('stripe')(process.env.STRIPE_SECRET_KEY);
-      const pending  = {
+      const stripe  = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      const pending = {
         id: uuidv4(), agentId: agent.id, name, email,
         password:           await bcrypt.hash(password, 10),
         status:             'pending',
         subscriptionExpiry: null,
-        stripeCustomerId:   null,
-        createdAt:          new Date().toISOString()
+        stripeCustomerId:   null
       };
-      db.addClient(pending);
+      await db.addClient(pending);
 
       const checkout = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -194,17 +204,16 @@ router.post('/api/client/:agentSlug/register', async (req, res) => {
       return res.json({ success: true, checkoutUrl: checkout.url });
     }
 
-    // No Stripe configured — activate immediately (dev / manual billing mode)
+    // No Stripe — activate immediately (dev / manual billing)
     const expiry = new Date(Date.now() + 30*24*60*60*1000);
     const client = {
       id: uuidv4(), agentId: agent.id, name, email,
       password:           await bcrypt.hash(password, 10),
       status:             'active',
       subscriptionExpiry: expiry.toISOString().split('T')[0],
-      stripeCustomerId:   null,
-      createdAt:          new Date().toISOString()
+      stripeCustomerId:   null
     };
-    db.addClient(client);
+    await db.addClient(client);
     req.session.clientId  = client.id;
     req.session.agentSlug = agent.slug;
     res.json({ success: true, redirect: `/${agent.slug}/app` });
@@ -217,12 +226,12 @@ router.post('/api/client/:agentSlug/register', async (req, res) => {
 // ── Client login API ───────────────────────────────────────────
 router.post('/api/client/:agentSlug/login', async (req, res) => {
   try {
-    const agent = db.getAgentBySlug(req.params.agentSlug);
+    const agent = await db.getAgentBySlug(req.params.agentSlug);
     if (!agent || agent.status !== 'active')
       return res.status(404).json({ error: 'Agent not found' });
 
     const { email, password } = req.body;
-    const client = db.getClientByEmail(email, agent.id);
+    const client = await db.getClientByEmail(email, agent.id);
     if (!client || !await bcrypt.compare(password, client.password))
       return res.status(401).json({ error: 'Invalid credentials' });
     if (client.status === 'pending')
@@ -251,15 +260,16 @@ router.get('/api/client/logout', (req, res) => {
 router.post('/api/client/itinerary', async (req, res) => {
   if (!req.session || !req.session.clientId)
     return res.status(401).json({ error: 'Not authenticated' });
-  const client = db.getClientById(req.session.clientId);
-  if (!client) return res.status(401).json({ error: 'Session invalid' });
-
-  const { mood } = req.body;
-  if (!mood) return res.status(400).json({ error: 'Mood is required' });
-
-  const agent = db.getAgentById(client.agentId);
 
   try {
+    const client = await db.getClientById(req.session.clientId);
+    if (!client) return res.status(401).json({ error: 'Session invalid' });
+
+    const { mood } = req.body;
+    if (!mood) return res.status(400).json({ error: 'Mood is required' });
+
+    const agent = await db.getAgentById(client.agentId);
+
     const message = await anthropic.messages.create({
       model:      'claude-sonnet-4-6',
       max_tokens: 2048,
@@ -275,8 +285,7 @@ router.post('/api/client/itinerary', async (req, res) => {
     const defaults = {
       mood_title: mood, how_japan_feels: '', recommended_areas: [],
       train_lines: [], hidden_spots: [], best_time: '',
-      food_recommendations: [],
-      estimated_budget: { amount: '', breakdown: '' },
+      food_recommendations: [], estimated_budget: { amount: '', breakdown: '' },
       local_tips: [], cultural_notes: []
     };
     const itinerary = { ...defaults, ...JSON.parse(text) };
@@ -295,23 +304,24 @@ router.post('/api/client/itinerary', async (req, res) => {
 router.post('/api/client/chat', async (req, res) => {
   if (!req.session || !req.session.clientId)
     return res.status(401).json({ error: 'Not authenticated' });
-  const client = db.getClientById(req.session.clientId);
-  if (!client) return res.status(401).json({ error: 'Session invalid' });
-
-  const { messages } = req.body;
-  if (!Array.isArray(messages) || !messages.length)
-    return res.status(400).json({ error: 'Messages array is required' });
-
-  const agent = db.getAgentById(client.agentId);
-  const safe  = messages
-    .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-    .slice(-10)
-    .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
-
-  if (!safe.length || safe[safe.length - 1].role !== 'user')
-    return res.status(400).json({ error: 'Last message must be from user' });
 
   try {
+    const client = await db.getClientById(req.session.clientId);
+    if (!client) return res.status(401).json({ error: 'Session invalid' });
+
+    const { messages } = req.body;
+    if (!Array.isArray(messages) || !messages.length)
+      return res.status(400).json({ error: 'Messages array is required' });
+
+    const agent = await db.getAgentById(client.agentId);
+    const safe  = messages
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .slice(-10)
+      .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
+
+    if (!safe.length || safe[safe.length - 1].role !== 'user')
+      return res.status(400).json({ error: 'Last message must be from user' });
+
     const message = await anthropic.messages.create({
       model:      'claude-sonnet-4-6',
       max_tokens: 1024,

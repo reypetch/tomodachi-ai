@@ -1,8 +1,10 @@
 require('dotenv').config();
-const express   = require('express');
-const session   = require('express-session');
-const path      = require('path');
-const Anthropic = require('@anthropic-ai/sdk');
+const express    = require('express');
+const session    = require('express-session');
+const pgSession  = require('connect-pg-simple')(session);
+const path       = require('path');
+const Anthropic  = require('@anthropic-ai/sdk');
+const { initDB } = require('./lib/db');
 
 const app    = express();
 const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -20,10 +22,15 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
+  store: new pgSession({
+    conString:            process.env.DATABASE_URL,
+    tableName:            'sessions',
+    createTableIfMissing: true
+  }),
   secret:            process.env.SESSION_SECRET || 'tomodachi-dev-secret-changeme',
   resave:            false,
   saveUninitialized: false,
-  cookie:            { maxAge: 24 * 60 * 60 * 1000 }   // 24 h
+  cookie:            { maxAge: 24 * 60 * 60 * 1000 }
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -135,9 +142,12 @@ app.use('/',      require('./routes/client'));   // handles /:agentSlug/* and /
 
 // ── Start ──────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`\n🗾  Tomodachi.ai is live → http://localhost:${PORT}\n`);
-  console.log(`   Consumer:  http://localhost:${PORT}/`);
-  console.log(`   Admin:     http://localhost:${PORT}/admin`);
-  console.log(`   Agent:     http://localhost:${PORT}/agent/login\n`);
-});
+(async () => {
+  await initDB();
+  app.listen(PORT, () => {
+    console.log(`\n🗾  Tomodachi.ai is live → http://localhost:${PORT}\n`);
+    console.log(`   Consumer:  http://localhost:${PORT}/`);
+    console.log(`   Admin:     http://localhost:${PORT}/admin`);
+    console.log(`   Agent:     http://localhost:${PORT}/agent/login\n`);
+  });
+})();

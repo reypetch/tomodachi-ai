@@ -29,26 +29,32 @@ router.get('/', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'views', 'admin-dashboard.html'));
 });
 
-router.get('/api/stats', requireAdmin, (req, res) => {
-  const agents = db.getAgents();
-  const clients = db.getClients();
-  const now = new Date();
-  res.json({
-    totalAgents:   agents.length,
-    activeAgents:  agents.filter(a => a.status === 'active').length,
-    totalClients:  clients.length,
-    activeClients: clients.filter(c => c.status === 'active' && new Date(c.subscriptionExpiry) > now).length,
-  });
+router.get('/api/stats', requireAdmin, async (req, res) => {
+  try {
+    const [agents, clients] = await Promise.all([db.getAgents(), db.getClients()]);
+    const now = new Date();
+    res.json({
+      totalAgents:   agents.length,
+      activeAgents:  agents.filter(a => a.status === 'active').length,
+      totalClients:  clients.length,
+      activeClients: clients.filter(c => c.status === 'active' && new Date(c.subscriptionExpiry) > now).length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-router.get('/api/agents', requireAdmin, (req, res) => {
-  const agents = db.getAgents();
-  const clients = db.getClients();
-  res.json(agents.map(a => ({
-    ...a,
-    password: undefined,
-    clientCount: clients.filter(c => c.agentId === a.id).length
-  })));
+router.get('/api/agents', requireAdmin, async (req, res) => {
+  try {
+    const [agents, clients] = await Promise.all([db.getAgents(), db.getClients()]);
+    res.json(agents.map(a => ({
+      ...a,
+      password:    undefined,
+      clientCount: clients.filter(c => c.agentId === a.id).length
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.post('/api/agents', requireAdmin, async (req, res) => {
@@ -63,50 +69,59 @@ router.post('/api/agents', requireAdmin, async (req, res) => {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
 
-    if (db.getAgentBySlug(cleanSlug))
-      return res.status(400).json({ error: 'Slug already in use' });
-    if (db.getAgentByEmail(email))
-      return res.status(400).json({ error: 'Email already registered' });
+    const [existing, existingEmail] = await Promise.all([
+      db.getAgentBySlug(cleanSlug),
+      db.getAgentByEmail(email)
+    ]);
+    if (existing)      return res.status(400).json({ error: 'Slug already in use' });
+    if (existingEmail) return res.status(400).json({ error: 'Email already registered' });
 
     const agent = {
-      id:          uuidv4(),
-      slug:        cleanSlug,
+      id:         uuidv4(),
+      slug:       cleanSlug,
       name,
-      logo:        null,
-      whatsapp:    whatsapp || '',
+      logo:       null,
+      whatsapp:   whatsapp || '',
       email,
-      password:    await bcrypt.hash(password, 10),
-      status:      'active',
-      plan:        plan || 'yearly',
-      planExpiry:  planExpiry || new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
-      packages:    [],
-      hotels:      [],
-      createdAt:   new Date().toISOString()
+      password:   await bcrypt.hash(password, 10),
+      status:     'active',
+      plan:       plan || 'yearly',
+      planExpiry: planExpiry || new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
+      packages:   [],
+      hotels:     [],
+      createdAt:  new Date().toISOString()
     };
 
-    db.addAgent(agent);
+    await db.addAgent(agent);
     res.json({ success: true, agent: { ...agent, password: undefined } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.patch('/api/agents/:id/status', requireAdmin, (req, res) => {
-  const agent = db.getAgentById(req.params.id);
-  if (!agent) return res.status(404).json({ error: 'Agent not found' });
-  const newStatus = agent.status === 'active' ? 'inactive' : 'active';
-  db.updateAgent(agent.id, { status: newStatus });
-  res.json({ success: true, status: newStatus });
+router.patch('/api/agents/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const agent = await db.getAgentById(req.params.id);
+    if (!agent) return res.status(404).json({ error: 'Agent not found' });
+    const newStatus = agent.status === 'active' ? 'inactive' : 'active';
+    await db.updateAgent(agent.id, { status: newStatus });
+    res.json({ success: true, status: newStatus });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-router.get('/api/clients', requireAdmin, (req, res) => {
-  const clients = db.getClients();
-  const agents  = db.getAgents();
-  res.json(clients.map(c => ({
-    ...c,
-    password:  undefined,
-    agentName: (agents.find(a => a.id === c.agentId) || {}).name || 'Unknown'
-  })));
+router.get('/api/clients', requireAdmin, async (req, res) => {
+  try {
+    const [clients, agents] = await Promise.all([db.getClients(), db.getAgents()]);
+    res.json(clients.map(c => ({
+      ...c,
+      password:  undefined,
+      agentName: (agents.find(a => a.id === c.agentId) || {}).name || 'Unknown'
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
