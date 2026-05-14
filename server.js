@@ -148,7 +148,7 @@ const PORT = process.env.PORT || 3000;
   } catch (err) {
     console.error('DB init failed — check DATABASE_URL:', err.message);
   }
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🗾  Tomodachi.ai is live → http://localhost:${PORT}\n`);
     console.log(`   Consumer:  http://localhost:${PORT}/`);
     console.log(`   Admin:     http://localhost:${PORT}/admin`);
