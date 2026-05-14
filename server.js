@@ -4,7 +4,7 @@ const session    = require('express-session');
 const pgSession  = require('connect-pg-simple')(session);
 const path       = require('path');
 const Anthropic  = require('@anthropic-ai/sdk');
-const { initDB } = require('./lib/db');
+const { initDB, pool } = require('./lib/db');
 
 const app    = express();
 const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -148,7 +148,7 @@ const PORT = process.env.PORT || 3000;
   } catch (err) {
     console.error('DB init failed — check DATABASE_URL:', err.message);
   }
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🗾  Tomodachi.ai is live → http://localhost:${PORT}\n`);
     console.log(`   Consumer:  http://localhost:${PORT}/`);
     console.log(`   Admin:     http://localhost:${PORT}/admin`);
