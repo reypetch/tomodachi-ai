@@ -3,7 +3,10 @@ const express    = require('express');
 const session    = require('express-session');
 const path       = require('path');
 const Anthropic  = require('@anthropic-ai/sdk');
-const { initDB, pool } = require('./lib/db');
+const { initDB } = require('./lib/db');
+
+process.on('uncaughtException',  err => console.error('Uncaught exception:', err));
+process.on('unhandledRejection', err => console.error('Unhandled rejection:', err));
 
 const app    = express();
 const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
