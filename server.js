@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express    = require('express');
 const session    = require('express-session');
-const pgSession  = require('connect-pg-simple')(session);
 const path       = require('path');
 const Anthropic  = require('@anthropic-ai/sdk');
 const { initDB, pool } = require('./lib/db');
@@ -22,11 +21,6 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  store: new pgSession({
-    pool,
-    tableName:            'sessions',
-    createTableIfMissing: true
-  }),
   secret:            process.env.SESSION_SECRET || 'tomodachi-dev-secret-changeme',
   resave:            false,
   saveUninitialized: false,
