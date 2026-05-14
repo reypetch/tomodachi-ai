@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get Access — Tomodachi.ai</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-0: #05050f; --bg-1: #09091a; --bg-2: #0e0e22;
+      --gold: #c9a84c; --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.22);
+      --text: #ededf5; --text-2: #9898b8; --text-3: #55556a;
+      --red: #e05555; --green: #50c878;
+      --sans: 'Inter', -apple-system, sans-serif; --serif: 'Noto Serif JP', Georgia, serif; --r: 10px;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-0); color: var(--text); font-family: var(--sans);
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 24px;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: radial-gradient(circle, rgba(201,168,76,0.04) 1px, transparent 1px);
+      background-size: 44px 44px; pointer-events: none;
+    }
+    .agent-header {
+      display: flex; flex-direction: column; align-items: center;
+      margin-bottom: 36px; text-align: center; position: relative; z-index: 1;
+    }
+    .agent-logo {
+      width: 72px; height: 72px; border-radius: 14px; object-fit: contain;
+      border: 1px solid var(--gold-border); background: var(--bg-2); margin-bottom: 12px;
+    }
+    .agent-logo-fallback {
+      width: 72px; height: 72px; border-radius: 14px;
+      background: var(--gold-dim); border: 1px solid var(--gold-border);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--serif); font-size: 1.6rem; color: var(--gold); margin-bottom: 12px;
+    }
+    .agent-name { font-family: var(--serif); font-size: 1.5rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .agent-sub { font-size: 0.85rem; color: var(--text-3); }
+    .card {
+      background: var(--bg-1); border: 1px solid var(--gold-border);
+      border-radius: 20px; padding: 40px; width: 100%; max-width: 440px;
+      position: relative; z-index: 1;
+    }
+    .price-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--gold-dim); border: 1px solid var(--gold-border);
+      border-radius: 100px; padding: 6px 16px; margin-bottom: 20px;
+    }
+    .price-pill .amount { font-size: 1.1rem; font-weight: 700; color: var(--gold); }
+    .price-pill .period { font-size: 0.8rem; color: var(--text-2); }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
+    .sub { color: var(--text-2); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.5; }
+    .fg { margin-bottom: 14px; }
+    label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+    input {
+      width: 100%; background: var(--bg-2); border: 1px solid var(--gold-border);
+      color: var(--text); padding: 11px 14px; border-radius: var(--r);
+      font-family: var(--sans); font-size: 0.92rem; outline: none; transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--gold); }
+    .btn {
+      width: 100%; background: linear-gradient(135deg, var(--gold), #e2bb60);
+      border: none; color: #0a0806; padding: 13px; border-radius: var(--r);
+      font-size: 1rem; font-weight: 700; font-family: var(--sans); cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s; margin-top: 4px;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,168,76,0.35); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .msg { border-radius: var(--r); padding: 10px 14px; font-size: 0.88rem; margin-bottom: 16px; display: none; }
+    .msg.err { background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.3); color: var(--red); }
+    .msg.ok  { background: rgba(80,200,120,0.1); border: 1px solid rgba(80,200,120,0.3); color: var(--green); }
+    .divider { text-align: center; margin: 18px 0; font-size: 0.82rem; color: var(--text-3); }
+    .login-link a { color: var(--gold); text-decoration: none; font-size: 0.88rem; }
+    .login-link a:hover { text-decoration: underline; }
+    .features { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .feat { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text-2); }
+    .feat::before { content: '✓'; color: var(--gold); font-weight: 700; flex-shrink: 0; }
+    .loading-state { text-align: center; padding: 40px; color: var(--text-2); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="agent-header" id="agentHeader">
+    <div class="loading-state" id="loadingAgent">Loading…</div>
+  </div>
+
+  <div class="card">
+    <div id="priceRow"></div>
+    <h1 id="cardTitle">Get Access</h1>
+    <p class="sub" id="cardSub">Create your account to start planning your Japan journey.</p>
+
+    <div id="noticeBar" style="display:none;background:rgba(224,85,85,0.1);border:1px solid rgba(224,85,85,0.3);color:#e05555;border-radius:10px;padding:10px 14px;font-size:.88rem;margin-bottom:16px;"></div>
+
+    <div class="msg err" id="err"></div>
+    <div class="msg ok"  id="ok"></div>
+
+    <div class="features">
+      <div class="feat">Personalized Japan itineraries based on your mood</div>
+      <div class="feat">AI travel companion — ask anything about Japan</div>
+      <div class="feat">30 days of unlimited access</div>
+      <div class="feat">Curated hotels &amp; tours from your travel agent</div>
+    </div>
+
+    <form id="form" onsubmit="register(event)">
+      <div class="fg">
+        <label>Full Name</label>
+        <input type="text" id="name" placeholder="Your name" required>
+      </div>
+      <div class="fg">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="you@email.com" required>
+      </div>
+      <div class="fg">
+        <label>Password</label>
+        <input type="password" id="pw" placeholder="Min 8 characters" required minlength="8">
+      </div>
+      <button class="btn" id="btn" type="submit">Get Access — $5</button>
+    </form>
+
+    <div class="divider">Already have an account?</div>
+    <div class="login-link" style="text-align:center;">
+      <a id="loginLink" href="#">Sign in here</a>
+    </div>
+  </div>
+
+  <script>
+    const slug = window.location.pathname.split('/').filter(Boolean)[0];
+    let hasStripe = false;
+
+    async function loadBrand() {
+      try {
+        const r = await fetch(`/api/brand/${slug}`);
+        if (!r.ok) { document.getElementById('loadingAgent').textContent = 'Invalid or inactive agent page.'; return; }
+        const agent = await r.json();
+
+        document.title = `Get Access — ${agent.name}`;
+        document.getElementById('loginLink').href = `/${slug}/login`;
+
+        const hdr = document.getElementById('agentHeader');
+        hdr.innerHTML = agent.logo
+          ? `<img class="agent-logo" src="${agent.logo}" alt="${agent.name} logo"><div class="agent-name">${agent.name}</div><div class="agent-sub">Japan Travel Experience</div>`
+          : `<div class="agent-logo-fallback">旅</div><div class="agent-name">${agent.name}</div><div class="agent-sub">Japan Travel Experience</div>`;
+      } catch { document.getElementById('loadingAgent').textContent = 'Could not load agent info.'; }
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('canceled') === '1') {
+      document.getElementById('noticeBar').style.display = 'block';
+      document.getElementById('noticeBar').textContent = 'Payment was canceled. You can try again below.';
+    }
+    if (params.get('payment_failed') === '1') {
+      document.getElementById('noticeBar').style.display = 'block';
+      document.getElementById('noticeBar').textContent = 'Payment could not be verified. Please try again or contact support.';
+    }
+
+    async function register(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn');
+      const err = document.getElementById('err');
+      const ok  = document.getElementById('ok');
+      err.style.display = ok.style.display = 'none';
+      btn.disabled = true; btn.textContent = 'Processing…';
+
+      try {
+        const r = await fetch(`/api/client/${slug}/register`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name:     document.getElementById('name').value,
+            email:    document.getElementById('email').value,
+            password: document.getElementById('pw').value
+          })
+        });
+        const d = await r.json();
+        if (!r.ok) { err.textContent = d.error || 'Registration failed.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Get Access — $5'; return; }
+        if (d.checkoutUrl) { window.location.href = d.checkoutUrl; return; }
+        if (d.redirect)    { window.location.href = d.redirect;    return; }
+        ok.textContent = 'Account created! Redirecting…'; ok.style.display = 'block';
+        setTimeout(() => window.location.href = `/${slug}/app`, 1200);
+      } catch { err.textContent = 'Connection error. Please try again.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Get Access — $5'; }
+    }
+
+    loadBrand();
+  </script>
+</body>
+</html>

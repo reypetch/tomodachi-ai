@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Login — Tomodachi.ai</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-0: #05050f; --bg-1: #09091a; --bg-2: #0e0e22;
+      --gold: #c9a84c; --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.22);
+      --text: #ededf5; --text-2: #9898b8; --text-3: #55556a;
+      --red: #e05555; --sans: 'Inter', -apple-system, sans-serif;
+      --serif: 'Noto Serif JP', Georgia, serif; --r: 10px;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-0); color: var(--text); font-family: var(--sans);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: radial-gradient(circle, rgba(201,168,76,0.04) 1px, transparent 1px);
+      background-size: 44px 44px; pointer-events: none;
+    }
+    .card {
+      background: var(--bg-1); border: 1px solid var(--gold-border);
+      border-radius: 20px; padding: 48px 40px; width: 100%; max-width: 420px;
+      position: relative; z-index: 1;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+    .logo-k { font-family: var(--serif); font-size: 1.8rem; font-weight: 700; color: var(--gold); }
+    .logo-t { font-size: 1.1rem; font-weight: 700; }
+    .logo-t span { color: var(--gold); }
+    h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; }
+    .sub { color: var(--text-2); font-size: 0.9rem; margin-bottom: 28px; }
+    .fg { margin-bottom: 16px; }
+    label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 7px; }
+    input {
+      width: 100%; background: var(--bg-2); border: 1px solid var(--gold-border);
+      color: var(--text); padding: 12px 14px; border-radius: var(--r);
+      font-family: var(--sans); font-size: 0.95rem; outline: none; transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--gold); }
+    .btn {
+      width: 100%; background: linear-gradient(135deg, var(--gold), #e2bb60);
+      border: none; color: #0a0806; padding: 13px; border-radius: var(--r);
+      font-size: 1rem; font-weight: 700; font-family: var(--sans); cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s; margin-top: 8px;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,168,76,0.35); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .err { background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.3);
+      color: var(--red); border-radius: var(--r); padding: 10px 14px; font-size: 0.88rem;
+      margin-bottom: 16px; display: none; }
+    .home { text-align: center; margin-top: 20px; }
+    .home a { color: var(--text-3); font-size: 0.82rem; text-decoration: none; }
+    .home a:hover { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-k">友達</div>
+      <div class="logo-t">Tomodachi<span>.ai</span></div>
+    </div>
+    <h1>Travel Agent Login</h1>
+    <p class="sub">Access your client management dashboard</p>
+    <div class="err" id="err"></div>
+    <form id="form" onsubmit="login(event)">
+      <div class="fg">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="agent@email.com" required autocomplete="username">
+      </div>
+      <div class="fg">
+        <label>Password</label>
+        <input type="password" id="pw" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button class="btn" id="btn" type="submit">Sign In to Dashboard</button>
+    </form>
+    <div class="home"><a href="/">← Back to Tomodachi.ai</a></div>
+  </div>
+  <script>
+    async function login(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn');
+      const err = document.getElementById('err');
+      err.style.display = 'none';
+      btn.disabled = true; btn.textContent = 'Signing in…';
+      try {
+        const r = await fetch('/agent/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('pw').value })
+        });
+        const d = await r.json();
+        if (r.ok) { window.location.href = '/agent/dashboard'; return; }
+        err.textContent = d.error || 'Login failed'; err.style.display = 'block';
+      } catch { err.textContent = 'Connection error. Please try again.'; err.style.display = 'block'; }
+      btn.disabled = false; btn.textContent = 'Sign In to Dashboard';
+    }
+  </script>
+</body>
+</html>

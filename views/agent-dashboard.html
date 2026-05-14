@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Dashboard — Tomodachi.ai</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-0: #05050f; --bg-1: #09091a; --bg-2: #0e0e22; --bg-3: #141430;
+      --gold: #c9a84c; --gold-light: #e2bb60; --gold-dim: rgba(201,168,76,0.1); --gold-border: rgba(201,168,76,0.22);
+      --text: #ededf5; --text-2: #9898b8; --text-3: #55556a;
+      --red: #e05555; --green: #50c878; --orange: #e09050;
+      --sans: 'Inter', -apple-system, sans-serif; --serif: 'Noto Serif JP', Georgia, serif; --r: 10px;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg-0); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: radial-gradient(circle, rgba(201,168,76,0.03) 1px, transparent 1px); background-size: 44px 44px; pointer-events: none; z-index: 0; }
+
+    .header { position: sticky; top: 0; z-index: 100; background: rgba(9,9,26,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--gold-border); padding: 0 32px; display: flex; align-items: center; gap: 24px; height: 60px; }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-k { font-family: var(--serif); font-size: 1.4rem; color: var(--gold); }
+    .logo-t { font-weight: 700; font-size: 0.95rem; }
+    .logo-t span { color: var(--gold); }
+    .agent-name-header { color: var(--text-2); font-size: 0.82rem; padding-left: 12px; border-left: 1px solid var(--gold-border); }
+    .tabs { display: flex; gap: 4px; flex: 1; }
+    .tab { background: none; border: none; color: var(--text-2); font-size: 0.88rem; font-family: var(--sans); padding: 8px 14px; border-radius: var(--r); cursor: pointer; transition: all 0.2s; }
+    .tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .tab.active { color: var(--gold); background: var(--gold-dim); }
+    .logout-btn { margin-left: auto; background: none; border: 1px solid var(--gold-border); color: var(--text-2); font-size: 0.82rem; font-family: var(--sans); padding: 6px 14px; border-radius: var(--r); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+    .content { max-width: 1100px; margin: 0 auto; padding: 32px 32px 80px; position: relative; z-index: 1; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--bg-1); border: 1px solid var(--gold-border); border-radius: 14px; padding: 22px 20px; }
+    .stat-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 10px; }
+    .stat-val { font-size: 2rem; font-weight: 700; color: var(--gold); line-height: 1; }
+    .stat-card.warn .stat-val { color: var(--orange); }
+
+    .slug-box { background: var(--bg-1); border: 1px solid var(--gold-border); border-radius: 14px; padding: 20px 24px; display: flex; align-items: center; gap: 16px; }
+    .slug-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 4px; }
+    .slug-url { font-size: 1rem; color: var(--gold); font-family: monospace; word-break: break-all; flex: 1; }
+    .copy-btn { background: var(--gold-dim); border: 1px solid var(--gold-border); color: var(--gold); font-size: 0.78rem; font-family: var(--sans); padding: 6px 14px; border-radius: var(--r); cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .copy-btn:hover { background: rgba(201,168,76,0.2); }
+
+    .sec-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .sec-title { font-size: 1.05rem; font-weight: 700; }
+    .btn-primary { background: linear-gradient(135deg, var(--gold), var(--gold-light)); border: none; color: #0a0806; padding: 9px 18px; border-radius: var(--r); font-size: 0.85rem; font-weight: 700; font-family: var(--sans); cursor: pointer; transition: transform 0.2s; }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-sm { background: none; border: 1px solid var(--gold-border); color: var(--text-2); font-size: 0.78rem; font-family: var(--sans); padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+    .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-danger { border-color: rgba(224,85,85,0.4); color: var(--red); }
+    .btn-danger:hover { border-color: var(--red); background: rgba(224,85,85,0.08); }
+
+    .table-wrap { background: var(--bg-1); border: 1px solid var(--gold-border); border-radius: 14px; overflow: hidden; margin-bottom: 28px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 12px 16px; text-align: left; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); border-bottom: 1px solid var(--gold-border); background: var(--bg-2); }
+    td { padding: 12px 16px; font-size: 0.87rem; color: var(--text-2); border-bottom: 1px solid rgba(201,168,76,0.07); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(201,168,76,0.025); }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 0.7rem; font-weight: 600; }
+    .status-active   { background: rgba(80,200,120,0.12); border: 1px solid rgba(80,200,120,0.3);  color: var(--green); }
+    .status-inactive { background: rgba(224,85,85,0.1);   border: 1px solid rgba(224,85,85,0.25); color: var(--red); }
+    .status-expired  { background: rgba(224,144,80,0.1);  border: 1px solid rgba(224,144,80,0.25);color: var(--orange); }
+    .status-pending  { background: rgba(100,100,200,0.1); border: 1px solid rgba(100,100,200,0.25);color: #9090e0; }
+    .empty-row td { text-align: center; padding: 36px; color: var(--text-3); font-style: italic; }
+
+    /* ── Inline add-client form ── */
+    .add-form { background: var(--bg-1); border: 1px solid var(--gold-border); border-radius: 14px; padding: 24px; margin-bottom: 28px; }
+    .add-form h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 18px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr 120px; gap: 12px; align-items: end; }
+    .fg { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); }
+    input, select { background: var(--bg-2); border: 1px solid var(--gold-border); color: var(--text); padding: 10px 12px; border-radius: var(--r); font-family: var(--sans); font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
+    input:focus, select:focus { border-color: var(--gold); }
+    .msg-box { border-radius: var(--r); padding: 10px 14px; font-size: 0.85rem; margin-top: 12px; display: none; }
+    .msg-box.err { background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.3); color: var(--red); }
+    .msg-box.ok  { background: rgba(80,200,120,0.1); border: 1px solid rgba(80,200,120,0.3); color: var(--green); }
+
+    /* ── Inventory ── */
+    .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .inv-section { background: var(--bg-1); border: 1px solid var(--gold-border); border-radius: 14px; padding: 24px; }
+    .inv-section h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 18px; }
+    .inv-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--gold-border); padding-bottom: 20px; }
+    .inv-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(201,168,76,0.07); }
+    .inv-item:last-child { border-bottom: none; }
+    .inv-item-info { flex: 1; }
+    .inv-name { font-weight: 600; font-size: 0.88rem; color: var(--text); margin-bottom: 2px; }
+    .inv-desc { font-size: 0.8rem; color: var(--text-3); }
+    .inv-price { font-size: 0.8rem; color: var(--gold); }
+    .inv-empty { color: var(--text-3); font-size: 0.85rem; font-style: italic; padding: 16px 0; text-align: center; }
+
+    /* ── Settings ── */
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .settings-card { background: var(--bg-1); border: 1px solid var(--gold-border); border-radius: 14px; padding: 28px; }
+    .settings-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 20px; }
+    .logo-preview { width: 72px; height: 72px; border-radius: 12px; object-fit: contain; border: 1px solid var(--gold-border); background: var(--bg-2); margin-bottom: 12px; display: block; }
+    .logo-fallback { width: 72px; height: 72px; border-radius: 12px; background: var(--gold-dim); border: 1px solid var(--gold-border); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 1.6rem; color: var(--gold); margin-bottom: 12px; }
+    .file-input-wrap { position: relative; display: inline-block; }
+    .file-input-wrap input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .file-label { display: inline-block; background: none; border: 1px solid var(--gold-border); color: var(--text-2); padding: 8px 16px; border-radius: var(--r); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+    .file-label:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── Toast ── */
+    .toast-wrap { position: fixed; bottom: 32px; right: 32px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+    .toast { background: var(--bg-3); border: 1px solid var(--gold-border); color: var(--text); padding: 12px 18px; border-radius: var(--r); font-size: 0.88rem; max-width: 320px; animation: toastIn 0.3s ease; }
+    .toast.err { border-color: rgba(224,85,85,0.4); color: var(--red); }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media(max-width:900px) { .stats { grid-template-columns: repeat(2,1fr); } .form-row { grid-template-columns: 1fr 1fr; } .inv-grid, .settings-grid { grid-template-columns: 1fr; } }
+    @media(max-width:600px) { .stats { grid-template-columns: 1fr 1fr; } .header { padding: 0 16px; } .content { padding: 16px 16px 60px; } .tabs { gap: 2px; } .tab { padding: 6px 8px; font-size: 0.78rem; } .form-row { grid-template-columns: 1fr; } th, td { padding: 10px 10px; } }
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="logo">
+    <span class="logo-k">友達</span>
+    <span class="logo-t">Tomodachi<span>.ai</span></span>
+  </div>
+  <span class="agent-name-header" id="agentNameHeader">Loading…</span>
+  <nav class="tabs">
+    <button class="tab active" onclick="showTab('overview')">Overview</button>
+    <button class="tab" onclick="showTab('clients')">Clients</button>
+    <button class="tab" onclick="showTab('inventory')">Inventory</button>
+    <button class="tab" onclick="showTab('settings')">Settings</button>
+  </nav>
+  <button class="logout-btn" onclick="window.location='/agent/logout'">Logout</button>
+</header>
+
+<main class="content">
+
+  <!-- Overview -->
+  <div id="tab-overview" class="panel active">
+    <div class="stats">
+      <div class="stat-card"><div class="stat-label">Total Clients</div><div class="stat-val" id="s-total">—</div></div>
+      <div class="stat-card"><div class="stat-label">Active Now</div><div class="stat-val" id="s-active">—</div></div>
+      <div class="stat-card warn"><div class="stat-label">Expiring (7 days)</div><div class="stat-val" id="s-expiring">—</div></div>
+      <div class="stat-card"><div class="stat-label">Expired</div><div class="stat-val" id="s-expired">—</div></div>
+    </div>
+    <div class="slug-box" id="slugBox" style="display:none">
+      <div>
+        <div class="slug-label">Your Client Share Link</div>
+        <div class="slug-url" id="slugUrl">—</div>
+      </div>
+      <button class="copy-btn" onclick="copySlug()">Copy Link</button>
+    </div>
+  </div>
+
+  <!-- Clients -->
+  <div id="tab-clients" class="panel">
+    <div class="add-form" id="addClientForm">
+      <h3>Add Client Manually</h3>
+      <div class="form-row">
+        <div class="fg"><label>Full Name</label><input type="text" id="c-name" placeholder="Tourist Name"></div>
+        <div class="fg"><label>Email</label><input type="email" id="c-email" placeholder="tourist@email.com"></div>
+        <div class="fg"><label>Days</label><input type="number" id="c-days" value="30" min="1" max="365"></div>
+      </div>
+      <button class="btn-primary" style="margin-top:14px" onclick="addClient()">Add Client</button>
+      <div class="msg-box" id="clientFormMsg"></div>
+    </div>
+    <div class="sec-hdr"><div class="sec-title">All Clients</div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Expiry</th><th>Joined</th><th>Action</th></tr></thead>
+        <tbody id="clientsBody"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Inventory -->
+  <div id="tab-inventory" class="panel">
+    <p style="color:var(--text-2);font-size:.88rem;margin-bottom:24px;">Hotels and packages listed here will be recommended by the AI to your clients during chat and itinerary generation.</p>
+    <div class="inv-grid">
+      <div class="inv-section">
+        <h3>Hotels</h3>
+        <div class="inv-form">
+          <div class="fg"><label>Hotel Name</label><input type="text" id="h-name" placeholder="Hotel Gracery Shinjuku"></div>
+          <div class="fg"><label>Description</label><input type="text" id="h-desc" placeholder="Iconic Godzilla hotel in Kabukicho"></div>
+          <div class="fg"><label>Price</label><input type="text" id="h-price" placeholder="From ¥15,000/night"></div>
+          <div class="fg"><label>WhatsApp Booking Link</label><input type="text" id="h-wa" placeholder="https://wa.me/62xxx (optional)"></div>
+          <button class="btn-primary" onclick="addHotel()">+ Add Hotel</button>
+          <div class="msg-box" id="hotelMsg"></div>
+        </div>
+        <div id="hotelsList"><div class="inv-empty">No hotels added yet.</div></div>
+      </div>
+      <div class="inv-section">
+        <h3>Tour Packages</h3>
+        <div class="inv-form">
+          <div class="fg"><label>Package Name</label><input type="text" id="p-name" placeholder="5D4N Tokyo Explorer"></div>
+          <div class="fg"><label>Description</label><input type="text" id="p-desc" placeholder="Best of Tokyo in 5 days"></div>
+          <div class="fg"><label>Price</label><input type="text" id="p-price" placeholder="$499/person"></div>
+          <div class="fg"><label>WhatsApp Booking Link</label><input type="text" id="p-wa" placeholder="https://wa.me/62xxx (optional)"></div>
+          <button class="btn-primary" onclick="addPackage()">+ Add Package</button>
+          <div class="msg-box" id="packageMsg"></div>
+        </div>
+        <div id="packagesList"><div class="inv-empty">No packages added yet.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div id="tab-settings" class="panel">
+    <div class="settings-grid">
+      <div class="settings-card">
+        <h3>Agency Logo</h3>
+        <div id="logoPreviewWrap"><div class="logo-fallback">旅</div></div>
+        <p style="font-size:.82rem;color:var(--text-3);margin-bottom:14px;">Displayed to clients on login and app pages. Max 2MB.</p>
+        <div class="file-input-wrap">
+          <span class="file-label">Choose Logo Image</span>
+          <input type="file" id="logoFile" accept="image/*" onchange="uploadLogo(this)">
+        </div>
+        <div class="msg-box" id="logoMsg" style="margin-top:12px;"></div>
+      </div>
+      <div class="settings-card">
+        <h3>Agency Details</h3>
+        <div class="fg" style="margin-bottom:14px;"><label>Agency Name</label><input type="text" id="s-name" placeholder="Your agency name"></div>
+        <div class="fg" style="margin-bottom:18px;"><label>WhatsApp Number</label><input type="text" id="s-wa" placeholder="+62812345678"></div>
+        <button class="btn-primary" onclick="saveSettings()">Save Changes</button>
+        <div class="msg-box" id="settingsMsg" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+  let agentData = null;
+
+  function showTab(t) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + t).classList.add('active');
+    const idx = ['overview','clients','inventory','settings'].indexOf(t);
+    document.querySelectorAll('.tab')[idx].classList.add('active');
+    if (t === 'clients')   loadClients();
+    if (t === 'inventory') loadInventory();
+    if (t === 'settings')  loadSettings();
+  }
+
+  function toast(msg, type) {
+    const w = document.getElementById('toasts');
+    const d = document.createElement('div');
+    d.className = 'toast' + (type === 'err' ? ' err' : '');
+    d.textContent = msg; w.appendChild(d);
+    setTimeout(() => d.remove(), 3500);
+  }
+
+  function showMsg(id, msg, type) {
+    const el = document.getElementById(id);
+    el.className = 'msg-box ' + type; el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3500);
+  }
+
+  function statusBadge(s, expiry) {
+    const now = new Date();
+    if (s === 'active' && expiry && new Date(expiry) < now) s = 'expired';
+    const cls = { active:'status-active', inactive:'status-inactive', expired:'status-expired', pending:'status-pending' }[s] || 'status-inactive';
+    return `<span class="status-badge ${cls}">${s}</span>`;
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = String(s||''); return d.innerHTML; }
+
+  function copySlug() {
+    const url = document.getElementById('slugUrl').textContent;
+    navigator.clipboard.writeText(url).then(() => toast('Link copied to clipboard!'));
+  }
+
+  async function loadStats() {
+    try {
+      const d = await fetch('/agent/api/stats').then(r => r.json());
+      document.getElementById('s-total').textContent    = d.total;
+      document.getElementById('s-active').textContent   = d.active;
+      document.getElementById('s-expiring').textContent = d.expiringSoon;
+      document.getElementById('s-expired').textContent  = d.expired;
+    } catch {}
+  }
+
+  async function loadAgent() {
+    try {
+      const r = await fetch('/agent/api/me');
+      if (r.status === 401) { window.location.href = '/agent/login'; return; }
+      agentData = await r.json();
+      document.getElementById('agentNameHeader').textContent = agentData.name;
+      document.title = `${agentData.name} — Dashboard`;
+      const base = window.location.origin;
+      const url = `${base}/${agentData.slug}`;
+      document.getElementById('slugUrl').textContent = url;
+      document.getElementById('slugBox').style.display = 'flex';
+    } catch { window.location.href = '/agent/login'; }
+  }
+
+  async function loadClients() {
+    const tbody = document.getElementById('clientsBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Loading…</td></tr>';
+    try {
+      const clients = await fetch('/agent/api/clients').then(r => r.json());
+      if (!clients.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No clients yet. Add one above.</td></tr>'; return; }
+      tbody.innerHTML = clients.map(c => `
+        <tr>
+          <td><strong style="color:var(--text)">${esc(c.name)}</strong></td>
+          <td>${esc(c.email)}</td>
+          <td>${statusBadge(c.status, c.subscriptionExpiry)}</td>
+          <td>${esc(c.subscriptionExpiry || '—')}</td>
+          <td>${esc((c.createdAt||'').split('T')[0])}</td>
+          <td><button class="btn-sm ${c.status==='active'?'btn-danger':''}" onclick="toggleClient('${c.id}', this)">${c.status === 'active' ? 'Deactivate' : 'Activate'}</button></td>
+        </tr>
+      `).join('');
+    } catch { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Failed to load.</td></tr>'; }
+  }
+
+  async function addClient() {
+    const name  = document.getElementById('c-name').value.trim();
+    const email = document.getElementById('c-email').value.trim();
+    const days  = document.getElementById('c-days').value;
+    if (!name || !email) { showMsg('clientFormMsg', 'Name and email are required.', 'err'); return; }
+    try {
+      const r = await fetch('/agent/api/clients', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, days })
+      });
+      const d = await r.json();
+      if (!r.ok) { showMsg('clientFormMsg', d.error || 'Failed.', 'err'); return; }
+      showMsg('clientFormMsg', `Client added! Temp password: ${d.tempPassword}`, 'ok');
+      document.getElementById('c-name').value = '';
+      document.getElementById('c-email').value = '';
+      loadClients(); loadStats();
+    } catch { showMsg('clientFormMsg', 'Connection error.', 'err'); }
+  }
+
+  async function toggleClient(id, btn) {
+    btn.disabled = true;
+    try {
+      const d = await fetch(`/agent/api/clients/${id}/status`, { method: 'PATCH' }).then(r => r.json());
+      if (d.success) { toast(`Client ${d.status}`); loadClients(); }
+      else { toast(d.error || 'Failed', 'err'); btn.disabled = false; }
+    } catch { toast('Error', 'err'); btn.disabled = false; }
+  }
+
+  async function loadInventory() {
+    try {
+      const { hotels, packages } = await fetch('/agent/api/inventory').then(r => r.json());
+      renderHotels(hotels); renderPackages(packages);
+    } catch {}
+  }
+
+  function renderHotels(hotels) {
+    const el = document.getElementById('hotelsList');
+    if (!hotels.length) { el.innerHTML = '<div class="inv-empty">No hotels added yet.</div>'; return; }
+    el.innerHTML = hotels.map(h => `
+      <div class="inv-item">
+        <div class="inv-item-info">
+          <div class="inv-name">${esc(h.name)}</div>
+          <div class="inv-desc">${esc(h.description)}</div>
+          ${h.price ? `<div class="inv-price">${esc(h.price)}</div>` : ''}
+        </div>
+        <button class="btn-sm btn-danger" onclick="deleteHotel('${h.id}')">Remove</button>
+      </div>
+    `).join('');
+  }
+
+  function renderPackages(packages) {
+    const el = document.getElementById('packagesList');
+    if (!packages.length) { el.innerHTML = '<div class="inv-empty">No packages added yet.</div>'; return; }
+    el.innerHTML = packages.map(p => `
+      <div class="inv-item">
+        <div class="inv-item-info">
+          <div class="inv-name">${esc(p.name)}</div>
+          <div class="inv-desc">${esc(p.description)}</div>
+          ${p.price ? `<div class="inv-price">${esc(p.price)}</div>` : ''}
+        </div>
+        <button class="btn-sm btn-danger" onclick="deletePackage('${p.id}')">Remove</button>
+      </div>
+    `).join('');
+  }
+
+  async function addHotel() {
+    const name = document.getElementById('h-name').value.trim();
+    if (!name) { showMsg('hotelMsg', 'Hotel name required.', 'err'); return; }
+    try {
+      const r = await fetch('/agent/api/inventory/hotels', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: document.getElementById('h-desc').value, price: document.getElementById('h-price').value, whatsappLink: document.getElementById('h-wa').value })
+      });
+      const d = await r.json();
+      if (!r.ok) { showMsg('hotelMsg', d.error, 'err'); return; }
+      ['h-name','h-desc','h-price','h-wa'].forEach(id => document.getElementById(id).value = '');
+      renderHotels(d.hotels); toast('Hotel added!');
+    } catch { showMsg('hotelMsg', 'Error.', 'err'); }
+  }
+
+  async function deleteHotel(id) {
+    try {
+      await fetch(`/agent/api/inventory/hotels/${id}`, { method: 'DELETE' });
+      loadInventory(); toast('Hotel removed.');
+    } catch {}
+  }
+
+  async function addPackage() {
+    const name = document.getElementById('p-name').value.trim();
+    if (!name) { showMsg('packageMsg', 'Package name required.', 'err'); return; }
+    try {
+      const r = await fetch('/agent/api/inventory/packages', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: document.getElementById('p-desc').value, price: document.getElementById('p-price').value, whatsappLink: document.getElementById('p-wa').value })
+      });
+      const d = await r.json();
+      if (!r.ok) { showMsg('packageMsg', d.error, 'err'); return; }
+      ['p-name','p-desc','p-price','p-wa'].forEach(id => document.getElementById(id).value = '');
+      renderPackages(d.packages); toast('Package added!');
+    } catch { showMsg('packageMsg', 'Error.', 'err'); }
+  }
+
+  async function deletePackage(id) {
+    try {
+      await fetch(`/agent/api/inventory/packages/${id}`, { method: 'DELETE' });
+      loadInventory(); toast('Package removed.');
+    } catch {}
+  }
+
+  async function loadSettings() {
+    if (!agentData) return;
+    document.getElementById('s-name').value = agentData.name || '';
+    document.getElementById('s-wa').value   = agentData.whatsapp || '';
+    if (agentData.logo) {
+      document.getElementById('logoPreviewWrap').innerHTML = `<img class="logo-preview" src="${agentData.logo}" alt="Logo">`;
+    }
+  }
+
+  async function uploadLogo(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('logo', file);
+    try {
+      const r = await fetch('/agent/api/logo', { method: 'POST', body: fd });
+      const d = await r.json();
+      if (r.ok) {
+        document.getElementById('logoPreviewWrap').innerHTML = `<img class="logo-preview" src="${d.logo}?t=${Date.now()}" alt="Logo">`;
+        agentData.logo = d.logo;
+        showMsg('logoMsg', 'Logo updated!', 'ok'); toast('Logo updated!');
+      } else { showMsg('logoMsg', d.error || 'Upload failed.', 'err'); }
+    } catch { showMsg('logoMsg', 'Upload error.', 'err'); }
+  }
+
+  async function saveSettings() {
+    const name     = document.getElementById('s-name').value.trim();
+    const whatsapp = document.getElementById('s-wa').value.trim();
+    try {
+      const r = await fetch('/agent/api/me', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, whatsapp })
+      });
+      const d = await r.json();
+      if (r.ok) {
+        agentData.name = name; agentData.whatsapp = whatsapp;
+        document.getElementById('agentNameHeader').textContent = name;
+        showMsg('settingsMsg', 'Settings saved!', 'ok'); toast('Settings saved!');
+      } else { showMsg('settingsMsg', d.error || 'Failed.', 'err'); }
+    } catch { showMsg('settingsMsg', 'Error.', 'err'); }
+  }
+
+  // Init
+  loadAgent().then(() => loadStats());
+</script>
+</body>
+</html>

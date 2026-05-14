@@ -1,14 +1,33 @@
 require('dotenv').config();
-const express = require('express');
+const express   = require('express');
+const session   = require('express-session');
+const path      = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
-const path = require('path');
 
-const app = express();
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const app    = express();
+const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-app.use(express.json());
+// ── Stripe webhook needs raw body — must be registered before express.json() ──
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/stripe/webhook') {
+    express.raw({ type: 'application/json' })(req, res, next);
+  } else {
+    next();
+  }
+});
+
+// ── Core middleware ────────────────────────────────────────────
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(session({
+  secret:            process.env.SESSION_SECRET || 'tomodachi-dev-secret-changeme',
+  resave:            false,
+  saveUninitialized: false,
+  cookie:            { maxAge: 24 * 60 * 60 * 1000 }   // 24 h
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── Consumer API (original, unchanged) ────────────────────────
 const SYSTEM_PROMPT = `You are Tomodachi, an AI local friend who knows Japan deeply. You speak like a friendly local — warm, knowledgeable, and honest. You don't just give tourist info, you share how Japan feels. Mix practical advice with emotional storytelling. Always include hidden gems, not just famous spots.
 
 CRITICAL: Your entire response must be a single raw JSON object. No markdown, no backticks, no explanation — only the JSON.
@@ -48,93 +67,59 @@ Important: Never introduce yourself as an AI. You're just a local friend who hap
 
 app.post('/api/itinerary', async (req, res) => {
   const { mood } = req.body;
-
-  if (!mood) {
-    return res.status(400).json({ error: 'Mood is required' });
-  }
+  if (!mood) return res.status(400).json({ error: 'Mood is required' });
 
   try {
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    const message = await claude.messages.create({
+      model:      'claude-sonnet-4-6',
       max_tokens: 2048,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `Create a complete Japan travel itinerary for the mood: "${mood}". Speak to me like I'm your friend who's visiting Japan soon with this exact vibe. Make it personal, exciting, and full of details only a local would know. Return only the JSON object.`
-        }
-      ]
+      system:     SYSTEM_PROMPT,
+      messages:   [{ role: 'user', content: `Create a complete Japan travel itinerary for the mood: "${mood}". Speak to me like I'm your friend who's visiting Japan soon with this exact vibe. Make it personal, exciting, and full of details only a local would know. Return only the JSON object.` }]
     });
 
-    const responseText = message.content[0].text.trim();
-
-    let jsonText = responseText;
-    const codeBlockMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (codeBlockMatch) {
-      jsonText = codeBlockMatch[1];
-    } else {
-      const objMatch = responseText.match(/\{[\s\S]*\}/);
-      if (objMatch) jsonText = objMatch[0];
-    }
+    let text = message.content[0].text.trim();
+    const cb = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (cb) text = cb[1];
+    else { const m = text.match(/\{[\s\S]*\}/); if (m) text = m[0]; }
 
     const defaults = {
-      mood_title: mood,
-      how_japan_feels: 'Japan has a way of making you feel both completely lost and perfectly at home.',
-      recommended_areas: [],
-      train_lines: [],
-      hidden_spots: [],
+      mood_title: mood, how_japan_feels: 'Japan has a way of making you feel both completely lost and perfectly at home.',
+      recommended_areas: [], train_lines: [], hidden_spots: [],
       best_time: 'Spring (March–May) and autumn (September–November) are ideal for most travel styles.',
-      food_recommendations: [],
-      estimated_budget: { amount: '¥5,000–¥10,000 per day', breakdown: 'Budget varies by dining choices and activities.' },
-      local_tips: [],
-      cultural_notes: [],
+      food_recommendations: [], estimated_budget: { amount: '¥5,000–¥10,000 per day', breakdown: 'Budget varies by dining choices and activities.' },
+      local_tips: [], cultural_notes: [],
     };
-    const itinerary = { ...defaults, ...JSON.parse(jsonText) };
+    const itinerary = { ...defaults, ...JSON.parse(text) };
     res.json({ success: true, itinerary });
 
   } catch (error) {
-    console.error('Error:', error.message);
-
-    if (error.status === 401) {
-      return res.status(401).json({ error: 'Invalid API key. Check your ANTHROPIC_API_KEY in .env' });
-    }
-    if (error.status === 429) {
-      return res.status(429).json({ error: 'Rate limit reached. Please wait a moment and try again.' });
-    }
-    if (error instanceof SyntaxError) {
-      return res.status(500).json({ error: 'Failed to parse AI response. Please try again.' });
-    }
-
+    console.error('Itinerary error:', error.message);
+    if (error.status === 401) return res.status(401).json({ error: 'Invalid API key. Check your ANTHROPIC_API_KEY in .env' });
+    if (error.status === 429) return res.status(429).json({ error: 'Rate limit reached. Please wait a moment and try again.' });
+    if (error instanceof SyntaxError) return res.status(500).json({ error: 'Failed to parse AI response. Please try again.' });
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
 
 app.post('/api/chat', async (req, res) => {
   const { messages } = req.body;
-
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+  if (!messages || !Array.isArray(messages) || !messages.length)
     return res.status(400).json({ error: 'Messages array is required' });
-  }
 
-  const safeMessages = messages
+  const safe = messages
     .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
     .slice(-10)
     .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
 
-  if (safeMessages.length === 0 || safeMessages[safeMessages.length - 1].role !== 'user') {
+  if (!safe.length || safe[safe.length - 1].role !== 'user')
     return res.status(400).json({ error: 'Last message must be from user' });
-  }
 
   try {
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: CHAT_SYSTEM_PROMPT,
-      messages: safeMessages,
+    const message = await claude.messages.create({
+      model: 'claude-sonnet-4-6', max_tokens: 1024,
+      system: CHAT_SYSTEM_PROMPT, messages: safe,
     });
-
     res.json({ reply: message.content[0].text });
-
   } catch (error) {
     console.error('Chat error:', error.message);
     if (error.status === 401) return res.status(401).json({ error: 'Invalid API key.' });
@@ -143,11 +128,16 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// ── B2B routes ─────────────────────────────────────────────────
+app.use('/admin', require('./routes/admin'));
+app.use('/agent', require('./routes/agent'));
+app.use('/',      require('./routes/client'));   // handles /:agentSlug/* and /
 
+// ── Start ──────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n🗾  Tomodachi.ai is live → http://localhost:${PORT}\n`);
+  console.log(`   Consumer:  http://localhost:${PORT}/`);
+  console.log(`   Admin:     http://localhost:${PORT}/admin`);
+  console.log(`   Agent:     http://localhost:${PORT}/agent/login\n`);
 });

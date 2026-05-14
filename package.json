@@ -1,7 +1,7 @@
 {
   "name": "tomodachi-ai",
-  "version": "1.0.0",
-  "description": "AI Japan Travel Companion for global tourists",
+  "version": "2.0.0",
+  "description": "AI Japan Travel Companion — B2B White-Label SaaS for travel agents",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,8 +9,13 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "dotenv": "^16.4.7"
+    "express-session": "^1.18.0",
+    "multer": "^1.4.5-lts.1",
+    "stripe": "^17.0.0",
+    "uuid": "^11.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login — Tomodachi.ai</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-0: #05050f; --bg-1: #09091a; --bg-2: #0e0e22;
+      --gold: #c9a84c; --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.22);
+      --text: #ededf5; --text-2: #9898b8; --text-3: #55556a;
+      --red: #e05555; --sans: 'Inter', -apple-system, sans-serif; --r: 10px;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-0); color: var(--text); font-family: var(--sans);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: radial-gradient(circle, rgba(201,168,76,0.04) 1px, transparent 1px);
+      background-size: 44px 44px; pointer-events: none;
+    }
+    .card {
+      background: var(--bg-1); border: 1px solid var(--gold-border);
+      border-radius: 20px; padding: 48px 40px; width: 100%; max-width: 420px;
+      position: relative; z-index: 1;
+    }
+    .badge {
+      display: inline-block; background: var(--gold-dim); border: 1px solid var(--gold-border);
+      color: var(--gold); font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.15em; padding: 4px 12px; border-radius: 100px; margin-bottom: 20px;
+    }
+    h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+    .sub { color: var(--text-2); font-size: 0.9rem; margin-bottom: 32px; }
+    .fg { margin-bottom: 18px; }
+    label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 7px; }
+    input {
+      width: 100%; background: var(--bg-2); border: 1px solid var(--gold-border);
+      color: var(--text); padding: 12px 14px; border-radius: var(--r);
+      font-family: var(--sans); font-size: 0.95rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--gold); }
+    .btn {
+      width: 100%; background: linear-gradient(135deg, var(--gold), #e2bb60);
+      border: none; color: #0a0806; padding: 13px; border-radius: var(--r);
+      font-size: 1rem; font-weight: 700; font-family: var(--sans); cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s; margin-top: 8px;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,168,76,0.35); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .err { background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.3);
+      color: var(--red); border-radius: var(--r); padding: 10px 14px; font-size: 0.88rem;
+      margin-bottom: 18px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">Super Admin</div>
+    <h1>Admin Login</h1>
+    <p class="sub">Tomodachi.ai platform management</p>
+    <div class="err" id="err"></div>
+    <form id="form" onsubmit="login(event)">
+      <div class="fg">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="admin@email.com" required autocomplete="username">
+      </div>
+      <div class="fg">
+        <label>Password</label>
+        <input type="password" id="pw" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button class="btn" id="btn" type="submit">Sign In</button>
+    </form>
+  </div>
+  <script>
+    async function login(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn');
+      const err = document.getElementById('err');
+      err.style.display = 'none';
+      btn.disabled = true; btn.textContent = 'Signing in…';
+      try {
+        const r = await fetch('/admin/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('pw').value })
+        });
+        const d = await r.json();
+        if (r.ok) { window.location.href = '/admin'; return; }
+        err.textContent = d.error || 'Login failed'; err.style.display = 'block';
+      } catch { err.textContent = 'Connection error'; err.style.display = 'block'; }
+      btn.disabled = false; btn.textContent = 'Sign In';
+    }
+  </script>
+</body>
+</html>

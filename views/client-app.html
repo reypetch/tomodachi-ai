@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Japan Travel Companion</title>
+  <meta name="description" content="Your AI Japan travel companion — personalized itineraries and chat.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-0:   #05050f; --bg-1: #09091a; --bg-2: #0e0e22; --bg-3: #141430;
+      --gold: #c9a84c; --gold-light: #e2bb60;
+      --gold-dim: rgba(201,168,76,0.12); --gold-border: rgba(201,168,76,0.22); --gold-glow: rgba(201,168,76,0.08);
+      --text: #ededf5; --text-2: #9898b8; --text-3: #55556a;
+      --serif: 'Noto Serif JP','Georgia',serif; --sans: 'Inter',-apple-system,sans-serif;
+      --r: 12px; --r-lg: 20px; --ease: 0.25s ease;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{background:var(--bg-0);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+    body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,rgba(201,162,39,0.05) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0;}
+    body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 15% 20%,rgba(201,162,39,0.04) 0%,transparent 70%),radial-gradient(ellipse 50% 50% at 85% 80%,rgba(90,60,180,0.04) 0%,transparent 70%);pointer-events:none;z-index:0;}
+    .container{max-width:1100px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+    .hidden{display:none!important;}
+
+    /* ── Header ── */
+    header{position:relative;padding:20px 0;border-bottom:1px solid var(--gold-border);overflow:hidden;}
+    .header-inner{display:flex;align-items:center;justify-content:space-between;}
+    .logo{display:flex;align-items:center;gap:14px;}
+    .logo-img{width:44px;height:44px;border-radius:10px;object-fit:contain;border:1px solid var(--gold-border);background:var(--bg-2);}
+    .logo-fallback{width:44px;height:44px;border-radius:10px;background:var(--gold-dim);border:1px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:1.2rem;color:var(--gold);}
+    .logo-text{display:flex;flex-direction:column;gap:1px;}
+    .logo-name{font-size:1.15rem;font-weight:700;color:var(--text);letter-spacing:-0.02em;}
+    .logo-name span{color:var(--gold);}
+    .logo-tagline{font-size:0.72rem;color:var(--text-3);letter-spacing:0.04em;}
+    .header-right{display:flex;align-items:center;gap:16px;}
+    .header-deco{font-family:var(--serif);font-size:5rem;font-weight:700;color:rgba(201,162,39,0.05);user-select:none;pointer-events:none;line-height:1;}
+    .logout-link{font-size:0.78rem;color:var(--text-3);text-decoration:none;border:1px solid var(--gold-border);padding:5px 12px;border-radius:100px;transition:all .2s;}
+    .logout-link:hover{color:var(--gold);border-color:var(--gold);}
+
+    /* ── Sections ── */
+    .view{padding:60px 0 80px;}
+    .section-header{text-align:center;margin-bottom:48px;}
+    .section-eyebrow{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.2em;color:var(--gold);margin-bottom:12px;}
+    .section-title{font-family:var(--serif);font-size:2.6rem;font-weight:700;color:var(--text);line-height:1.2;margin-bottom:14px;}
+    .section-subtitle{font-size:1.05rem;color:var(--text-2);max-width:420px;margin:0 auto;line-height:1.6;}
+
+    /* ── Mood Grid ── */
+    .mood-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+    .mood-card:nth-child(7){grid-column:2;}
+    .mood-card{background:var(--bg-2);border:1px solid var(--gold-border);border-radius:var(--r-lg);padding:30px 22px 26px;cursor:pointer;transition:transform var(--ease),box-shadow var(--ease),border-color var(--ease),background var(--ease);text-align:center;position:relative;overflow:hidden;animation:fadeUp .5s ease backwards;}
+    .mood-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold-glow) 0%,transparent 70%);opacity:0;transition:opacity var(--ease);}
+    .mood-card:hover{transform:translateY(-5px);border-color:var(--gold);box-shadow:0 16px 48px rgba(0,0,0,.5),0 0 24px rgba(201,162,39,.12);background:var(--bg-3);}
+    .mood-card:hover::before{opacity:1;}
+    .mood-card:active{transform:translateY(-2px) scale(.98);}
+    .mood-icon{font-size:2.6rem;margin-bottom:14px;display:block;line-height:1;}
+    .mood-name{font-family:var(--serif);font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:6px;}
+    .mood-tagline{font-size:.8rem;color:var(--text-3);line-height:1.4;}
+
+    /* ── Loading ── */
+    .loading-wrapper{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;}
+    .loading-rig{position:relative;width:110px;height:110px;margin-bottom:36px;}
+    .loading-ring{position:absolute;inset:0;border:2px solid rgba(201,162,39,.15);border-top:2px solid var(--gold);border-radius:50%;animation:spin 1.4s linear infinite;}
+    .loading-ring-inner{position:absolute;inset:16px;border:2px solid rgba(201,162,39,.08);border-top:2px solid var(--gold-light);border-radius:50%;animation:spin .9s linear infinite reverse;}
+    .loading-kanji{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:2rem;font-weight:700;color:var(--gold);animation:pulse 2s ease-in-out infinite;}
+    .loading-title{font-family:var(--serif);font-size:1.5rem;font-weight:700;color:var(--text);margin-bottom:10px;}
+    .loading-sub{font-size:.9rem;color:var(--text-3);max-width:300px;line-height:1.6;}
+    .loading-dots span{display:inline-block;width:4px;height:4px;background:var(--gold);border-radius:50%;margin:0 3px;animation:blink 1.4s ease-in-out infinite;}
+    .loading-dots span:nth-child(2){animation-delay:.2s;}.loading-dots span:nth-child(3){animation-delay:.4s;}
+
+    /* ── Result ── */
+    .back-btn{display:inline-flex;align-items:center;gap:8px;background:none;border:1px solid var(--gold-border);color:var(--text-2);padding:9px 20px;border-radius:100px;cursor:pointer;font-size:.875rem;font-family:var(--sans);transition:all var(--ease);margin-bottom:32px;}
+    .back-btn:hover{border-color:var(--gold);color:var(--gold);}
+    .result-card{background:var(--bg-1);border:1px solid var(--gold-border);border-radius:var(--r-lg);padding:48px;animation:fadeUp .5s ease forwards;}
+    .result-header{margin-bottom:8px;}
+    .result-badge{display:inline-block;background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold);font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.15em;padding:4px 12px;border-radius:100px;margin-bottom:16px;}
+    .result-mood-title{font-family:var(--serif);font-size:2.8rem;font-weight:700;color:var(--text);line-height:1.15;margin-bottom:32px;}
+    .feels-section{background:linear-gradient(135deg,rgba(201,162,39,.07) 0%,rgba(201,162,39,.02) 100%);border-left:3px solid var(--gold);border-radius:0 var(--r) var(--r) 0;padding:28px 32px;margin-bottom:40px;}
+    .feels-quote-mark{font-family:var(--serif);font-size:5rem;line-height:0;vertical-align:-.35em;color:var(--gold);opacity:.25;margin-right:4px;}
+    .feels-label{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.18em;color:var(--gold);margin-bottom:12px;}
+    .feels-text{font-style:italic;font-size:1.15rem;line-height:1.8;color:var(--text);font-family:var(--serif);font-weight:300;}
+    .result-block{margin-bottom:36px;}
+    .block-label{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.18em;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+    .block-label::after{content:'';flex:1;height:1px;background:var(--gold-border);}
+    .info-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:36px;}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;}
+    .chip{background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--text);padding:6px 14px;border-radius:100px;font-size:.85rem;}
+    .chip-outline{background:transparent;border:1px solid rgba(201,162,39,.18);color:var(--text-2);}
+    .spots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+    .spot-card{background:var(--bg-2);border:1px solid var(--gold-border);border-radius:var(--r);padding:22px 18px;transition:border-color var(--ease);}
+    .spot-card:hover{border-color:var(--gold);}
+    .spot-name{font-weight:600;font-size:.95rem;color:var(--gold-light);margin-bottom:10px;}
+    .spot-desc{font-size:.875rem;color:var(--text-2);line-height:1.65;}
+    .food-list{display:flex;flex-direction:column;gap:0;}
+    .food-item{padding:20px 0;border-bottom:1px solid rgba(201,162,39,.08);display:grid;grid-template-columns:1fr;gap:6px;}
+    .food-item:last-child{border-bottom:none;}
+    .food-name{font-weight:600;font-size:.95rem;color:var(--text);}
+    .food-desc{font-size:.875rem;color:var(--text-2);line-height:1.6;}
+    .food-tip{font-size:.82rem;color:var(--gold);font-style:italic;}
+    .budget-card{background:var(--bg-2);border:1px solid var(--gold-border);border-radius:var(--r);padding:24px;display:flex;gap:20px;align-items:flex-start;}
+    .budget-icon{font-size:1.8rem;line-height:1;margin-top:2px;}
+    .budget-amount{font-family:var(--serif);font-size:1.6rem;font-weight:700;color:var(--gold);margin-bottom:6px;line-height:1.2;}
+    .budget-breakdown{font-size:.875rem;color:var(--text-2);line-height:1.65;}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:32px;}
+    .tip-list{list-style:none;display:flex;flex-direction:column;gap:12px;}
+    .tip-item{font-size:.9rem;color:var(--text-2);line-height:1.6;padding-left:20px;position:relative;}
+    .tip-item::before{content:'▸';position:absolute;left:0;color:var(--gold);font-size:.75rem;top:3px;}
+    .info-text{font-size:.925rem;color:var(--text-2);line-height:1.7;}
+    .result-cta{text-align:center;margin-top:44px;padding-top:36px;border-top:1px solid var(--gold-border);display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+    .cta-btn{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--gold) 0%,var(--gold-light) 100%);color:#0a0806;border:none;padding:15px 36px;border-radius:100px;font-size:1rem;font-weight:700;font-family:var(--sans);cursor:pointer;transition:transform var(--ease),box-shadow var(--ease);text-decoration:none;}
+    .cta-btn:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(201,162,39,.4);}
+    .cta-btn:active{transform:translateY(-1px);}
+    .whatsapp-btn{background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;}
+    .whatsapp-btn:hover{box-shadow:0 10px 30px rgba(37,211,102,.35);}
+    .error-card{background:var(--bg-2);border:1px solid rgba(255,80,80,.25);border-radius:var(--r-lg);padding:56px 40px;text-align:center;animation:fadeUp .4s ease forwards;}
+    .error-icon{font-size:3rem;margin-bottom:20px;}
+    .error-card h3{font-family:var(--serif);font-size:1.5rem;color:var(--text);margin-bottom:12px;}
+    .error-card p{color:var(--text-2);font-size:.95rem;margin-bottom:28px;line-height:1.6;}
+
+    /* ── Footer ── */
+    footer{position:relative;z-index:1;border-top:1px solid var(--gold-border);padding:28px 0;text-align:center;color:var(--text-3);font-size:.82rem;}
+    footer .footer-jp{font-family:var(--serif);color:var(--gold);opacity:.35;display:block;margin-top:4px;font-size:.75rem;letter-spacing:.1em;}
+
+    /* ── Animations ── */
+    @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.92)}}
+    @keyframes blink{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+    /* ── Chat ── */
+    .chat-section{padding:0 0 80px;}
+    .chat-divider{text-align:center;margin-bottom:48px;position:relative;}
+    .chat-divider::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:var(--gold-border);}
+    .chat-divider-text{position:relative;background:var(--bg-0);padding:0 20px;font-family:var(--serif);font-size:.75rem;color:var(--text-3);letter-spacing:.12em;}
+    .chat-wrap{max-width:720px;margin:0 auto;}
+    .chat-box{background:var(--bg-1);border:1px solid var(--gold-border);border-radius:var(--r-lg);overflow:hidden;}
+    .chat-messages{height:420px;overflow-y:auto;padding:24px 24px 12px;display:flex;flex-direction:column;gap:18px;scroll-behavior:smooth;}
+    .chat-messages::-webkit-scrollbar{width:3px;}
+    .chat-messages::-webkit-scrollbar-thumb{background:var(--gold-border);border-radius:2px;}
+    .chat-bubble{display:flex;gap:10px;align-items:flex-start;animation:fadeUp .3s ease;}
+    .user-bubble{flex-direction:row-reverse;}
+    .bubble-av{width:34px;height:34px;border-radius:50%;background:var(--gold-dim);border:1px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:.85rem;color:var(--gold);flex-shrink:0;}
+    .user-bubble .bubble-av{background:rgba(100,80,200,.12);border-color:rgba(120,100,220,.25);color:#a090ff;font-size:.62rem;font-family:var(--sans);font-weight:600;}
+    .bubble-body{max-width:80%;background:var(--bg-2);border:1px solid var(--gold-border);border-radius:4px var(--r) var(--r) var(--r);padding:13px 16px;font-size:.9rem;line-height:1.72;color:var(--text);}
+    .user-bubble .bubble-body{background:rgba(80,60,180,.1);border-color:rgba(120,100,220,.2);border-radius:var(--r) 4px var(--r) var(--r);}
+    .bubble-body p{margin:0 0 6px;}.bubble-body p:last-child{margin-bottom:0;}
+    .bubble-body strong{color:var(--gold-light);font-weight:600;}
+    .bubble-body em{color:var(--text-2);}
+    .bubble-body code{background:var(--bg-3);padding:1px 6px;border-radius:4px;font-size:.85em;font-family:monospace;}
+    .chat-typing{display:flex;gap:10px;align-items:center;padding:0 24px 16px;}
+    .typing-bubbles{background:var(--bg-2);border:1px solid var(--gold-border);border-radius:4px var(--r) var(--r) var(--r);padding:12px 16px;display:flex;gap:5px;align-items:center;}
+    .typing-bubbles span{width:6px;height:6px;background:var(--gold);border-radius:50%;opacity:.4;animation:blink 1.2s ease-in-out infinite;}
+    .typing-bubbles span:nth-child(2){animation-delay:.15s;}.typing-bubbles span:nth-child(3){animation-delay:.3s;}
+    .chat-input-row{display:flex;border-top:1px solid var(--gold-border);background:var(--bg-2);}
+    .chat-field{flex:1;background:none;border:none;padding:16px 20px;color:var(--text);font-size:.95rem;font-family:var(--sans);outline:none;}
+    .chat-field::placeholder{color:var(--text-3);}
+    .chat-send{background:var(--gold);border:none;padding:0 22px;color:#08060a;font-size:.9rem;font-weight:700;font-family:var(--sans);cursor:pointer;transition:background var(--ease);display:flex;align-items:center;gap:6px;white-space:nowrap;}
+    .chat-send:hover{background:var(--gold-light);}
+    .chat-send:disabled{opacity:.45;cursor:not-allowed;}
+    .chat-suggestions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px;}
+    .suggest-chip{background:none;border:1px solid var(--gold-border);color:var(--text-3);padding:7px 16px;border-radius:100px;font-size:.8rem;cursor:pointer;font-family:var(--sans);transition:all var(--ease);}
+    .suggest-chip:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-dim);}
+
+    /* ── Responsive ── */
+    @media(max-width:900px){.mood-grid{grid-template-columns:repeat(2,1fr);}.mood-card:nth-child(7){grid-column:auto;}.spots-grid{grid-template-columns:1fr 1fr;}.two-col{grid-template-columns:1fr;gap:24px;}.section-title{font-size:2rem;}}
+    @media(max-width:680px){.result-card{padding:28px 20px;}.result-mood-title{font-size:2rem;}.info-row{grid-template-columns:1fr;}.spots-grid{grid-template-columns:1fr;}.feels-section{padding:20px;}.feels-text{font-size:1rem;}.header-deco{display:none;}.chat-messages{height:340px;}.bubble-body{max-width:88%;}}
+    @media(max-width:480px){.mood-grid{grid-template-columns:1fr;}.section-title{font-size:1.7rem;}.budget-card{flex-direction:column;gap:12px;}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="header-inner">
+        <div class="logo" id="agentLogo">
+          <div class="logo-fallback">友</div>
+          <div class="logo-text">
+            <div class="logo-name" id="agentNameDisplay">Tomodachi<span>.ai</span></div>
+            <div class="logo-tagline">Your AI Local Friend in Japan</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="header-deco" aria-hidden="true">日本</div>
+          <a href="#" id="logoutLink" class="logout-link">Logout</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="view-selector" class="view">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-eyebrow">Travel Mood Mode</div>
+          <h1 class="section-title">Choose Your Travel Vibe</h1>
+          <p class="section-subtitle">Tell me your mood — I'll show you my Japan.</p>
+        </div>
+        <div class="mood-grid" id="mood-grid" role="list"></div>
+      </div>
+    </section>
+
+    <section id="view-loading" class="view hidden">
+      <div class="container">
+        <div class="loading-wrapper">
+          <div class="loading-rig">
+            <div class="loading-ring"></div>
+            <div class="loading-ring-inner"></div>
+            <div class="loading-kanji">友</div>
+          </div>
+          <p class="loading-title">Crafting your journey<span class="loading-dots"><span></span><span></span><span></span></span></p>
+          <p class="loading-sub">Your tomodachi is thinking about the perfect spots for you</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-result" class="view hidden">
+      <div class="container">
+        <button class="back-btn" onclick="showSelector()">&#8592; Back to Moods</button>
+        <div id="result-content"></div>
+      </div>
+    </section>
+
+    <section id="chat-section" class="chat-section">
+      <div class="container">
+        <div class="chat-divider" aria-hidden="true">
+          <span class="chat-divider-text">或いは · or just ask</span>
+        </div>
+        <div class="section-header" style="margin-bottom:32px;">
+          <div class="section-eyebrow">AI Local Friend</div>
+          <h2 class="section-title">Ask Your Local Friend</h2>
+          <p class="section-subtitle">Got questions about Japan? Ask me anything — trains, food, culture, hidden spots.</p>
+        </div>
+        <div class="chat-wrap">
+          <div class="chat-box">
+            <div class="chat-messages" id="chat-messages">
+              <div class="chat-bubble ai-bubble">
+                <div class="bubble-av">友</div>
+                <div class="bubble-body">
+                  <p>Hey! I'm Tomodachi — your local friend in Japan 🗾</p>
+                  <p>Pick a mood card above for a full itinerary, or just ask me anything. Train confusion? Best ramen spots? Cultural questions? I've got you.</p>
+                </div>
+              </div>
+            </div>
+            <div id="chat-typing" class="chat-typing hidden">
+              <div class="bubble-av">友</div>
+              <div class="typing-bubbles"><span></span><span></span><span></span></div>
+            </div>
+            <div class="chat-input-row">
+              <input type="text" id="chat-field" class="chat-field" placeholder="Ask anything about Japan…" maxlength="500" autocomplete="off">
+              <button id="chat-send-btn" class="chat-send" onclick="sendChat()">Send &#10148;</button>
+            </div>
+          </div>
+          <div class="chat-suggestions">
+            <button class="suggest-chip" onclick="quickAsk(this)">How do IC cards work?</button>
+            <button class="suggest-chip" onclick="quickAsk(this)">Best ramen under ¥1,000</button>
+            <button class="suggest-chip" onclick="quickAsk(this)">I'm scared of Shinjuku station</button>
+            <button class="suggest-chip" onclick="quickAsk(this)">Is Japan safe for solo travel?</button>
+            <button class="suggest-chip" onclick="quickAsk(this)">JR Pass — worth it?</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      Powered by <span id="footerAgent" style="color:var(--gold)">Tomodachi.ai</span>
+      <span class="footer-jp">旅は人生の宝 · Travel is life's treasure</span>
+    </div>
+  </footer>
+
+  <script>
+    const agentSlug = window.location.pathname.split('/').filter(Boolean)[0];
+
+    // Load agent branding
+    async function loadBrand() {
+      try {
+        const r = await fetch(`/api/brand/${agentSlug}`);
+        if (!r.ok) return;
+        const agent = await r.json();
+        document.title = `${agent.name} — Japan Travel`;
+        document.getElementById('agentNameDisplay').innerHTML = `${agent.name}`;
+        document.getElementById('footerAgent').textContent = agent.name;
+        if (agent.logo) {
+          document.getElementById('agentLogo').querySelector('.logo-fallback, .logo-img') &&
+          (document.querySelector('.logo-fallback') || document.querySelector('.logo-img')).remove();
+          const img = document.createElement('img');
+          img.className = 'logo-img'; img.src = agent.logo; img.alt = agent.name;
+          document.getElementById('agentLogo').insertBefore(img, document.getElementById('agentLogo').firstChild);
+        }
+        window._agentWhatsapp = agent.whatsapp;
+        window._agentName     = agent.name;
+      } catch {}
+    }
+
+    document.getElementById('logoutLink').href = '/api/client/logout';
+
+    const MOODS = [
+      { emoji:'⚡', name:'Anime & Pop Culture',  tagline:'Neon dreams & manga magic' },
+      { emoji:'🏮', name:'Hidden Local Tokyo',    tagline:'Where locals actually go' },
+      { emoji:'📻', name:'Retro Showa Japan',     tagline:'Nostalgia in every corner' },
+      { emoji:'🌙', name:'Night Walk Romantic',   tagline:'Tokyo after midnight' },
+      { emoji:'🎋', name:'Quiet Aesthetic',        tagline:'Stillness & wabi-sabi' },
+      { emoji:'🍜', name:'Foodie Adventure',       tagline:'Eat like a local' },
+      { emoji:'🌸', name:'Nature Escape',          tagline:'Mountains, forests & silence' },
+    ];
+
+    function esc(str) { const d=document.createElement('div');d.textContent=String(str??'');return d.innerHTML; }
+
+    function showView(id) {
+      ['view-selector','view-loading','view-result'].forEach(v =>
+        document.getElementById(v).classList.toggle('hidden', v !== id)
+      );
+      const cs = document.getElementById('chat-section');
+      if (cs) cs.classList.toggle('hidden', id !== 'view-selector');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function showSelector() { showView('view-selector'); }
+
+    function renderMoodCards() {
+      const grid = document.getElementById('mood-grid');
+      grid.innerHTML = MOODS.map((m,i) => `
+        <div class="mood-card" role="listitem button" tabindex="0" aria-label="Select ${m.name} mood"
+          style="animation-delay:${i*.07}s"
+          onclick="selectMood('${m.name}')"
+          onkeydown="if(event.key==='Enter'||event.key===' ')selectMood('${m.name}')">
+          <span class="mood-icon">${m.emoji}</span>
+          <div class="mood-name">${m.name}</div>
+          <div class="mood-tagline">${m.tagline}</div>
+        </div>
+      `).join('');
+    }
+
+    async function selectMood(mood) {
+      showView('view-loading');
+      try {
+        const res  = await fetch('/api/client/itinerary', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mood })
+        });
+        if (res.status === 401) { window.location.href = `/${agentSlug}/login`; return; }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+        if (!data.success) throw new Error(data.error || 'Unexpected response');
+        renderResult(data.itinerary);
+        showView('view-result');
+      } catch (err) {
+        renderError(err.message);
+        showView('view-result');
+      }
+    }
+
+    function renderResult(it) {
+      const chips = (arr,cls='') => (arr||[]).map(a=>`<span class="chip ${cls}">${esc(a)}</span>`).join('');
+      const spots = (it.hidden_spots||[]).map(s=>`<div class="spot-card"><div class="spot-name">${esc(s.name)}</div><div class="spot-desc">${esc(s.description)}</div></div>`).join('');
+      const foods = (it.food_recommendations||[]).map(f=>`<div class="food-item"><div class="food-name">${esc(f.name)}</div><div class="food-desc">${esc(f.description)}</div><div class="food-tip">&#128161; ${esc(f.tip)}</div></div>`).join('');
+      const tips  = (it.local_tips||[]).map(t=>`<li class="tip-item">${esc(t)}</li>`).join('');
+      const notes = (it.cultural_notes||[]).map(n=>`<li class="tip-item">${esc(n)}</li>`).join('');
+      const budget = it.estimated_budget || {};
+      const budgetAmount = budget.amount || budget.budget || '';
+
+      const waNumber  = it.agentWhatsapp || window._agentWhatsapp;
+      const agentName = it.agentName     || window._agentName || 'your travel agent';
+      const waLink    = waNumber ? `https://wa.me/${waNumber.replace(/[^0-9]/g,'')}?text=${encodeURIComponent(`Hi! I'd like to book this Japan trip. My itinerary: ${it.mood_title}`)}` : null;
+      const waBtnHtml = waLink
+        ? `<a href="${waLink}" target="_blank" rel="noopener" class="cta-btn whatsapp-btn">&#128172; Contact ${esc(agentName)} on WhatsApp</a>`
+        : '';
+
+      document.getElementById('result-content').innerHTML = `
+        <div class="result-card">
+          <div class="result-header">
+            <div class="result-badge">Your Japan Itinerary</div>
+            <h2 class="result-mood-title">${esc(it.mood_title||'Your Japan Journey')}</h2>
+          </div>
+          <div class="feels-section">
+            <div class="feels-label">How Japan Feels</div>
+            <p class="feels-text"><span class="feels-quote-mark" aria-hidden="true">"</span>${esc(it.how_japan_feels)}</p>
+          </div>
+          <div class="info-row">
+            <div class="result-block">
+              <div class="block-label">&#127754; Recommended Areas</div>
+              <div class="chips">${chips(it.recommended_areas)}</div>
+            </div>
+            <div class="result-block">
+              <div class="block-label">&#128646; Train Lines</div>
+              <div class="chips">${chips(it.train_lines,'chip-outline')}</div>
+            </div>
+          </div>
+          <div class="result-block">
+            <div class="block-label">&#128142; Hidden Spots</div>
+            <div class="spots-grid">${spots}</div>
+          </div>
+          <div class="result-block">
+            <div class="block-label">&#127800; Best Time to Visit</div>
+            <p class="info-text">${esc(it.best_time)}</p>
+          </div>
+          <div class="result-block">
+            <div class="block-label">&#127836; Food Recommendations</div>
+            <div class="food-list">${foods}</div>
+          </div>
+          <div class="result-block">
+            <div class="block-label">&#128180; Estimated Budget</div>
+            <div class="budget-card">
+              <div class="budget-icon">&#165;</div>
+              <div>
+                <div class="budget-amount">${esc(budgetAmount)}</div>
+                <div class="budget-breakdown">${esc(budget.breakdown)}</div>
+              </div>
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="result-block"><div class="block-label">&#128161; Local Tips</div><ul class="tip-list">${tips}</ul></div>
+            <div class="result-block"><div class="block-label">&#127991; Cultural Notes</div><ul class="tip-list">${notes}</ul></div>
+          </div>
+          <div class="result-cta">
+            <button class="cta-btn" onclick="showSelector()">&#10024; Try Another Mood</button>
+            ${waBtnHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderError(msg) {
+      document.getElementById('result-content').innerHTML = `
+        <div class="error-card">
+          <div class="error-icon">&#9888;&#65039;</div>
+          <h3>Something went wrong</h3>
+          <p>${esc(msg)}</p>
+          <button class="cta-btn" onclick="showSelector()">Try Again</button>
+        </div>
+      `;
+    }
+
+    renderMoodCards();
+    loadBrand();
+
+    // ── Chat ──────────────────────────────────────────────────────
+    let chatHistory = [];
+
+    function mdToHtml(text) {
+      return esc(text)
+        .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g,'<em>$1</em>')
+        .replace(/`([^`]+)`/g,'<code>$1</code>')
+        .replace(/\n\n+/g,'</p><p>')
+        .replace(/\n/g,'<br>');
+    }
+
+    function appendBubble(role, text) {
+      const isUser = role === 'user';
+      const msgs   = document.getElementById('chat-messages');
+      const div    = document.createElement('div');
+      div.className = `chat-bubble ${isUser?'user-bubble':'ai-bubble'}`;
+      div.innerHTML = `<div class="bubble-av">${isUser?'You':'友'}</div><div class="bubble-body"><p>${isUser?esc(text):mdToHtml(text)}</p></div>`;
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function setChatBusy(busy) {
+      document.getElementById('chat-typing').classList.toggle('hidden', !busy);
+      document.getElementById('chat-send-btn').disabled = busy;
+      document.getElementById('chat-field').disabled    = busy;
+      if (!busy) {
+        document.getElementById('chat-field').focus();
+        const msgs = document.getElementById('chat-messages');
+        msgs.scrollTop = msgs.scrollHeight;
+      }
+    }
+
+    async function sendChat() {
+      const field = document.getElementById('chat-field');
+      const text  = field.value.trim();
+      if (!text || document.getElementById('chat-send-btn').disabled) return;
+      field.value = '';
+      appendBubble('user', text);
+      chatHistory.push({ role: 'user', content: text });
+      setChatBusy(true);
+      try {
+        const res  = await fetch('/api/client/chat', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: chatHistory.slice(-10) })
+        });
+        if (res.status === 401) { window.location.href = `/${agentSlug}/login`; return; }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Server error');
+        chatHistory.push({ role: 'assistant', content: data.reply });
+        setChatBusy(false);
+        appendBubble('ai', data.reply);
+      } catch (err) {
+        setChatBusy(false);
+        appendBubble('ai', `Gomen nasai! Couldn't connect right now — give it another shot. (${esc(err.message)})`);
+      }
+    }
+
+    function quickAsk(btn) { document.getElementById('chat-field').value = btn.textContent; sendChat(); }
+
+    document.getElementById('chat-field').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+    });
+  </script>
+</body>
+</html>

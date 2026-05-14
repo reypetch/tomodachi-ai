@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — Tomodachi.ai</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-0: #05050f; --bg-1: #09091a; --bg-2: #0e0e22; --bg-3: #141430;
+      --gold: #c9a84c; --gold-light: #e2bb60; --gold-dim: rgba(201,168,76,0.1); --gold-border: rgba(201,168,76,0.22);
+      --text: #ededf5; --text-2: #9898b8; --text-3: #55556a;
+      --red: #e05555; --green: #50c878; --orange: #e09050;
+      --sans: 'Inter', -apple-system, sans-serif; --serif: 'Noto Serif JP', Georgia, serif; --r: 10px;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg-0); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: radial-gradient(circle, rgba(201,168,76,0.03) 1px, transparent 1px); background-size: 44px 44px; pointer-events: none; z-index: 0; }
+
+    /* ── Header ── */
+    .header { position: sticky; top: 0; z-index: 100; background: rgba(9,9,26,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--gold-border); padding: 0 32px; display: flex; align-items: center; gap: 32px; height: 60px; }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
+    .logo-k { font-family: var(--serif); font-size: 1.4rem; color: var(--gold); }
+    .logo-t { font-weight: 700; font-size: 0.95rem; color: var(--text); }
+    .logo-t span { color: var(--gold); }
+    .badge-admin { background: var(--gold-dim); border: 1px solid var(--gold-border); color: var(--gold); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; padding: 2px 8px; border-radius: 100px; }
+    .tabs { display: flex; gap: 4px; flex: 1; }
+    .tab { background: none; border: none; color: var(--text-2); font-size: 0.88rem; font-family: var(--sans); padding: 8px 16px; border-radius: var(--r); cursor: pointer; transition: all 0.2s; }
+    .tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .tab.active { color: var(--gold); background: var(--gold-dim); }
+    .logout-btn { margin-left: auto; background: none; border: 1px solid var(--gold-border); color: var(--text-2); font-size: 0.82rem; font-family: var(--sans); padding: 6px 14px; border-radius: var(--r); cursor: pointer; transition: all 0.2s; }
+    .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Layout ── */
+    .content { max-width: 1200px; margin: 0 auto; padding: 32px 32px 80px; position: relative; z-index: 1; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Stats row ── */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--bg-1); border: 1px solid var(--gold-border); border-radius: 14px; padding: 22px 20px; }
+    .stat-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 10px; }
+    .stat-val { font-size: 2rem; font-weight: 700; color: var(--gold); line-height: 1; }
+
+    /* ── Section header ── */
+    .sec-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .sec-title { font-size: 1.1rem; font-weight: 700; }
+    .btn-primary { background: linear-gradient(135deg, var(--gold), var(--gold-light)); border: none; color: #0a0806; padding: 9px 20px; border-radius: var(--r); font-size: 0.88rem; font-weight: 700; font-family: var(--sans); cursor: pointer; transition: transform 0.2s; }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-sm { background: none; border: 1px solid var(--gold-border); color: var(--text-2); font-size: 0.78rem; font-family: var(--sans); padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+    .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-danger { border-color: rgba(224,85,85,0.4); color: var(--red); }
+    .btn-danger:hover { border-color: var(--red); background: rgba(224,85,85,0.08); }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--bg-1); border: 1px solid var(--gold-border); border-radius: 14px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 12px 16px; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); border-bottom: 1px solid var(--gold-border); background: var(--bg-2); }
+    td { padding: 13px 16px; font-size: 0.88rem; color: var(--text-2); border-bottom: 1px solid rgba(201,168,76,0.07); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(201,168,76,0.025); }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 0.72rem; font-weight: 600; }
+    .status-active   { background: rgba(80,200,120,0.12); border: 1px solid rgba(80,200,120,0.3); color: var(--green); }
+    .status-inactive { background: rgba(224,85,85,0.1);   border: 1px solid rgba(224,85,85,0.25);  color: var(--red); }
+    .status-expired  { background: rgba(224,144,80,0.1);  border: 1px solid rgba(224,144,80,0.25); color: var(--orange); }
+    .status-pending  { background: rgba(100,100,200,0.1); border: 1px solid rgba(100,100,200,0.25);color: #9090e0; }
+    .empty-row td { text-align: center; padding: 40px; color: var(--text-3); font-style: italic; }
+
+    /* ── Modal ── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: none; align-items: center; justify-content: center; padding: 24px; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--bg-1); border: 1px solid var(--gold-border); border-radius: 20px; padding: 36px; width: 100%; max-width: 480px; }
+    .modal h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 24px; }
+    .fg { margin-bottom: 14px; }
+    label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+    input, select { width: 100%; background: var(--bg-2); border: 1px solid var(--gold-border); color: var(--text); padding: 10px 13px; border-radius: var(--r); font-family: var(--sans); font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+    input:focus, select:focus { border-color: var(--gold); }
+    select option { background: var(--bg-2); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .btn-cancel { background: none; border: 1px solid var(--gold-border); color: var(--text-2); padding: 9px 18px; border-radius: var(--r); font-family: var(--sans); font-size: 0.88rem; cursor: pointer; }
+
+    /* ── Toast ── */
+    .toast-wrap { position: fixed; bottom: 32px; right: 32px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+    .toast { background: var(--bg-3); border: 1px solid var(--gold-border); color: var(--text); padding: 12px 18px; border-radius: var(--r); font-size: 0.88rem; max-width: 320px; animation: toastIn 0.3s ease; }
+    .toast.err { border-color: rgba(224,85,85,0.4); color: var(--red); }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Temp password box ── */
+    .temppass { background: var(--bg-2); border: 1px solid var(--gold-border); border-radius: var(--r); padding: 12px 16px; margin-top: 16px; font-size: 0.88rem; color: var(--text-2); word-break: break-all; display: none; }
+    .temppass strong { color: var(--gold); display: block; margin-bottom: 4px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    .temppass code { font-family: monospace; font-size: 1rem; color: var(--text); letter-spacing: 0.05em; }
+
+    .msg-err { color: var(--red); font-size: 0.85rem; margin-top: 10px; display: none; }
+
+    @media(max-width:900px) { .stats { grid-template-columns: repeat(2,1fr); } .header { padding: 0 16px; } .content { padding: 20px 16px 60px; } }
+    @media(max-width:600px) { .stats { grid-template-columns: 1fr 1fr; } .tabs { gap: 2px; } .tab { padding: 6px 10px; font-size: 0.8rem; } table { font-size: 0.8rem; } th, td { padding: 10px 10px; } }
+  </style>
+</head>
+<body>
+<header class="header">
+  <a class="logo" href="/admin">
+    <span class="logo-k">友達</span>
+    <span class="logo-t">Tomodachi<span>.ai</span></span>
+  </a>
+  <span class="badge-admin">Admin</span>
+  <nav class="tabs">
+    <button class="tab active" onclick="showTab('overview')">Overview</button>
+    <button class="tab" onclick="showTab('agents')">Agents</button>
+    <button class="tab" onclick="showTab('clients')">Clients</button>
+  </nav>
+  <button class="logout-btn" onclick="window.location='/admin/logout'">Logout</button>
+</header>
+
+<main class="content">
+  <!-- Overview -->
+  <div id="tab-overview" class="panel active">
+    <div class="stats" id="statsRow">
+      <div class="stat-card"><div class="stat-label">Total Agents</div><div class="stat-val" id="s-totalAgents">—</div></div>
+      <div class="stat-card"><div class="stat-label">Active Agents</div><div class="stat-val" id="s-activeAgents">—</div></div>
+      <div class="stat-card"><div class="stat-label">Total Clients</div><div class="stat-val" id="s-totalClients">—</div></div>
+      <div class="stat-card"><div class="stat-label">Active Clients</div><div class="stat-val" id="s-activeClients">—</div></div>
+    </div>
+    <p style="color:var(--text-3);font-size:.88rem;">Use the <strong style="color:var(--text-2)">Agents</strong> tab to add and manage travel agents. Use <strong style="color:var(--text-2)">Clients</strong> to view all registered clients across all agents.</p>
+  </div>
+
+  <!-- Agents -->
+  <div id="tab-agents" class="panel">
+    <div class="sec-hdr">
+      <div class="sec-title">Travel Agents</div>
+      <button class="btn-primary" onclick="openAddAgent()">+ Add Agent</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Slug / URL</th><th>Email</th><th>Plan</th><th>Expiry</th><th>Clients</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="agentsBody"><tr class="empty-row"><td colspan="8">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Clients -->
+  <div id="tab-clients" class="panel">
+    <div class="sec-hdr"><div class="sec-title">All Clients</div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Agent</th><th>Status</th><th>Expiry</th><th>Joined</th></tr></thead>
+        <tbody id="clientsBody"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Add Agent Modal -->
+<div class="overlay" id="addAgentModal">
+  <div class="modal">
+    <h2>Add New Agent</h2>
+    <div class="fg"><label>Agency Name</label><input type="text" id="f-name" placeholder="Yamamoto Travel"></div>
+    <div class="fg"><label>URL Slug</label><input type="text" id="f-slug" placeholder="yamamoto-travel" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'-')"></div>
+    <div class="fg"><label>Email</label><input type="email" id="f-email" placeholder="agent@email.com"></div>
+    <div class="fg"><label>Password</label><input type="password" id="f-pw" placeholder="Temporary password"></div>
+    <div class="fg"><label>WhatsApp</label><input type="text" id="f-wa" placeholder="+62812345678 (optional)"></div>
+    <div class="fg">
+      <label>Plan</label>
+      <select id="f-plan"><option value="yearly">Yearly</option><option value="monthly">Monthly</option></select>
+    </div>
+    <div class="fg"><label>Plan Expiry</label><input type="date" id="f-expiry"></div>
+    <div class="msg-err" id="addErr"></div>
+    <div class="temppass" id="tempInfo"><strong>Agent Credentials Created</strong><code id="tempCreds"></code></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddAgent()">Cancel</button>
+      <button class="btn-primary" id="addBtn" onclick="addAgent()">Create Agent</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+  let currentTab = 'overview';
+
+  function showTab(t) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + t).classList.add('active');
+    document.querySelectorAll('.tab')[['overview','agents','clients'].indexOf(t)].classList.add('active');
+    currentTab = t;
+    if (t === 'agents')   loadAgents();
+    if (t === 'clients')  loadClients();
+    if (t === 'overview') loadStats();
+  }
+
+  function toast(msg, type = 'ok') {
+    const w = document.getElementById('toasts');
+    const d = document.createElement('div');
+    d.className = 'toast' + (type === 'err' ? ' err' : '');
+    d.textContent = msg; w.appendChild(d);
+    setTimeout(() => d.remove(), 3500);
+  }
+
+  function statusBadge(s) {
+    const cls = { active:'status-active', inactive:'status-inactive', expired:'status-expired', pending:'status-pending' }[s] || 'status-inactive';
+    return `<span class="status-badge ${cls}">${s}</span>`;
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = String(s||''); return d.innerHTML; }
+
+  async function loadStats() {
+    try {
+      const d = await fetch('/admin/api/stats').then(r => r.json());
+      document.getElementById('s-totalAgents').textContent  = d.totalAgents;
+      document.getElementById('s-activeAgents').textContent = d.activeAgents;
+      document.getElementById('s-totalClients').textContent = d.totalClients;
+      document.getElementById('s-activeClients').textContent= d.activeClients;
+    } catch { toast('Failed to load stats', 'err'); }
+  }
+
+  async function loadAgents() {
+    const tbody = document.getElementById('agentsBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Loading…</td></tr>';
+    try {
+      const agents = await fetch('/admin/api/agents').then(r => r.json());
+      if (!agents.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No agents yet. Add one above.</td></tr>'; return; }
+      tbody.innerHTML = agents.map(a => `
+        <tr>
+          <td><strong style="color:var(--text)">${esc(a.name)}</strong></td>
+          <td><code style="font-size:.8rem;color:var(--gold)">${esc(a.slug)}</code></td>
+          <td>${esc(a.email)}</td>
+          <td style="text-transform:capitalize">${esc(a.plan)}</td>
+          <td>${esc(a.planExpiry)}</td>
+          <td>${a.clientCount || 0}</td>
+          <td>${statusBadge(a.status)}</td>
+          <td>
+            <button class="btn-sm ${a.status==='active'?'btn-danger':''}" onclick="toggleAgent('${a.id}', this)">
+              ${a.status === 'active' ? 'Deactivate' : 'Activate'}
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    } catch { tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Failed to load agents.</td></tr>'; }
+  }
+
+  async function loadClients() {
+    const tbody = document.getElementById('clientsBody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Loading…</td></tr>';
+    try {
+      const clients = await fetch('/admin/api/clients').then(r => r.json());
+      if (!clients.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No clients yet.</td></tr>'; return; }
+      tbody.innerHTML = clients.map(c => `
+        <tr>
+          <td><strong style="color:var(--text)">${esc(c.name)}</strong></td>
+          <td>${esc(c.email)}</td>
+          <td>${esc(c.agentName)}</td>
+          <td>${statusBadge(c.status)}</td>
+          <td>${esc(c.subscriptionExpiry || '—')}</td>
+          <td>${esc((c.createdAt||'').split('T')[0])}</td>
+        </tr>
+      `).join('');
+    } catch { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Failed to load clients.</td></tr>'; }
+  }
+
+  async function toggleAgent(id, btn) {
+    btn.disabled = true;
+    try {
+      const d = await fetch(`/admin/api/agents/${id}/status`, { method: 'PATCH' }).then(r => r.json());
+      if (d.success) { toast(`Agent ${d.status}`); loadAgents(); }
+      else { toast(d.error || 'Failed', 'err'); btn.disabled = false; }
+    } catch { toast('Connection error', 'err'); btn.disabled = false; }
+  }
+
+  function openAddAgent() {
+    const e = new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0];
+    document.getElementById('f-expiry').value = e;
+    document.getElementById('addErr').style.display = 'none';
+    document.getElementById('tempInfo').style.display = 'none';
+    document.getElementById('addAgentModal').classList.add('open');
+  }
+
+  function closeAddAgent() {
+    document.getElementById('addAgentModal').classList.remove('open');
+    ['f-name','f-slug','f-email','f-pw','f-wa'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('addBtn').disabled = false;
+    document.getElementById('addBtn').textContent = 'Create Agent';
+    document.getElementById('addErr').style.display = 'none';
+    document.getElementById('tempInfo').style.display = 'none';
+  }
+
+  async function addAgent() {
+    const btn = document.getElementById('addBtn');
+    const err = document.getElementById('addErr');
+    err.style.display = 'none';
+    btn.disabled = true; btn.textContent = 'Creating…';
+    try {
+      const payload = {
+        name:       document.getElementById('f-name').value,
+        slug:       document.getElementById('f-slug').value,
+        email:      document.getElementById('f-email').value,
+        password:   document.getElementById('f-pw').value,
+        whatsapp:   document.getElementById('f-wa').value,
+        plan:       document.getElementById('f-plan').value,
+        planExpiry: document.getElementById('f-expiry').value
+      };
+      const r = await fetch('/admin/api/agents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const d = await r.json();
+      if (!r.ok) { err.textContent = d.error || 'Failed to create agent.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Create Agent'; return; }
+      const ti = document.getElementById('tempInfo');
+      document.getElementById('tempCreds').textContent = `Login: ${payload.email}  |  Password: ${payload.password}`;
+      ti.style.display = 'block';
+      toast('Agent created successfully!');
+      btn.textContent = 'Done — Close';
+      btn.onclick = closeAddAgent;
+      loadAgents();
+    } catch { err.textContent = 'Connection error.'; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Create Agent'; }
+  }
+
+  // Close modal on overlay click
+  document.getElementById('addAgentModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAddAgent();
+  });
+
+  // Check auth, then load
+  fetch('/admin/api/stats').then(r => {
+    if (r.status === 401) { window.location.href = '/admin/login'; return; }
+    return r.json();
+  }).then(d => {
+    if (!d) return;
+    document.getElementById('s-totalAgents').textContent   = d.totalAgents;
+    document.getElementById('s-activeAgents').textContent  = d.activeAgents;
+    document.getElementById('s-totalClients').textContent  = d.totalClients;
+    document.getElementById('s-activeClients').textContent = d.activeClients;
+  }).catch(() => window.location.href = '/admin/login');
+</script>
+</body>
+</html>
