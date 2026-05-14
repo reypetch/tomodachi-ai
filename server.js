@@ -23,7 +23,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
   store: new pgSession({
-    conString:            process.env.DATABASE_URL,
+    pool,
     tableName:            'sessions',
     createTableIfMissing: true
   }),
