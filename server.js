@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express    = require('express');
 const session    = require('express-session');
+const pgSession  = require('connect-pg-simple')(session);
 const path       = require('path');
 const Anthropic  = require('@anthropic-ai/sdk');
 const { initDB } = require('./lib/db');
@@ -24,7 +25,12 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  secret:            process.env.SESSION_SECRET || 'tomodachi-dev-secret-changeme',
+  store: new pgSession({
+    conString:            process.env.DATABASE_URL,
+    tableName:            'sessions',
+    createTableIfMissing: true
+  }),
+  secret:            process.env.SESSION_SECRET || 'dev-secret',
   resave:            false,
   saveUninitialized: false,
   cookie:            { maxAge: 24 * 60 * 60 * 1000 }
@@ -146,9 +152,6 @@ const PORT = process.env.PORT || 3000;
     console.error('DB init failed — check DATABASE_URL:', err.message);
   }
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🗾  Tomodachi.ai is live → http://localhost:${PORT}\n`);
-    console.log(`   Consumer:  http://localhost:${PORT}/`);
-    console.log(`   Admin:     http://localhost:${PORT}/admin`);
-    console.log(`   Agent:     http://localhost:${PORT}/agent/login\n`);
+    console.log(`🗾 Tomodachi.ai is live → http://localhost:${PORT}`);
   });
 })();
