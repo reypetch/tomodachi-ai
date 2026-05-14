@@ -153,5 +153,8 @@ const PORT = process.env.PORT || 3000;
   }
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🗾 Tomodachi.ai is live → http://localhost:${PORT}`);
+    console.log(`   Consumer:  http://localhost:${PORT}/`);
+    console.log(`   Admin:     http://localhost:${PORT}/admin`);
+    console.log(`   Agent:     http://localhost:${PORT}/agent/login`);
   });
 })();
