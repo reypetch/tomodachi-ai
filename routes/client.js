@@ -7,6 +7,10 @@ const Anthropic = require('@anthropic-ai/sdk');
 const db        = require('../lib/db');
 const { requireActiveClient } = require('../lib/auth');
 
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
+  : null;
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function buildItinerarySystem(agent) {
@@ -113,9 +117,8 @@ router.get('/:agentSlug/success', async (req, res, next) => {
   try {
     const agent = await db.getAgentBySlug(req.params.agentSlug);
     if (!agent) return next();
-    if (!process.env.STRIPE_SECRET_KEY) return res.redirect(`/${agent.slug}/app`);
+    if (!stripe) return res.redirect(`/${agent.slug}/app`);
 
-    const stripe  = require('stripe')(process.env.STRIPE_SECRET_KEY);
     const stripeSession = await stripe.checkout.sessions.retrieve(req.query.session_id);
     if (stripeSession.payment_status === 'paid') {
       const expiry = new Date(Date.now() + 30*24*60*60*1000);
@@ -137,8 +140,7 @@ router.get('/:agentSlug/success', async (req, res, next) => {
 
 // ── Stripe webhook (raw body registered in server.js) ─────────
 router.post('/api/stripe/webhook', async (req, res) => {
-  if (!process.env.STRIPE_SECRET_KEY) return res.json({ received: true });
-  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  if (!stripe) return res.json({ received: true });
   let event;
   try {
     event = stripe.webhooks.constructEvent(
@@ -177,8 +179,7 @@ router.post('/api/client/:agentSlug/register', async (req, res) => {
     const existing = await db.getClientByEmail(email, agent.id);
     if (existing) return res.status(400).json({ error: 'Email already registered' });
 
-    if (process.env.STRIPE_SECRET_KEY) {
-      const stripe  = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    if (stripe) {
       const pending = {
         id: uuidv4(), agentId: agent.id, name, email,
         password:           await bcrypt.hash(password, 10),

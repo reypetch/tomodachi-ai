@@ -143,7 +143,11 @@ app.use('/',      require('./routes/client'));   // handles /:agentSlug/* and /
 // ── Start ──────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 (async () => {
-  await initDB();
+  try {
+    await initDB();
+  } catch (err) {
+    console.error('DB init failed — check DATABASE_URL:', err.message);
+  }
   app.listen(PORT, () => {
     console.log(`\n🗾  Tomodachi.ai is live → http://localhost:${PORT}\n`);
     console.log(`   Consumer:  http://localhost:${PORT}/`);
