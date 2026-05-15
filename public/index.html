@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
   <style>
     /* ── Variables ─────────────────────────────────────────────── */
     :root {
@@ -876,6 +878,154 @@
       .chat-messages { height: 340px; }
       .bubble-body { max-width: 88%; }
     }
+
+    /* ── Section divider ────────────────────────────────────────── */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--gold-border), transparent);
+      margin: 0 auto 60px;
+      max-width: 800px;
+    }
+
+    /* ── Map section ────────────────────────────────────────────── */
+    .map-section { padding: 0 0 80px; }
+
+    .map-wrapper {
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      border: 1px solid var(--gold-border);
+      height: 500px;
+    }
+
+    #tomodachi-map { width: 100%; height: 100%; }
+
+    .map-marker {
+      width: 14px;
+      height: 14px;
+      background: #c9a84c;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.25);
+      cursor: pointer;
+      box-shadow: 0 0 0 5px rgba(201,168,76,0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .map-marker:hover {
+      transform: scale(1.5);
+      box-shadow: 0 0 0 8px rgba(201,168,76,0.25);
+    }
+
+    .mapboxgl-popup-content {
+      background: #0e0e22 !important;
+      border: 1px solid rgba(201,168,76,0.3) !important;
+      border-radius: 10px !important;
+      color: #ededf5 !important;
+      padding: 10px 14px !important;
+      font-family: 'Inter', sans-serif !important;
+      font-size: 0.85rem !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+      min-width: 160px;
+    }
+
+    .mapboxgl-popup-tip { display: none !important; }
+
+    .mapboxgl-popup-close-button {
+      color: #9898b8 !important;
+      font-size: 1rem !important;
+      right: 6px !important;
+      top: 4px !important;
+    }
+
+    @media (max-width: 680px) { .map-wrapper { height: 360px; } }
+
+    /* ── Agents section ─────────────────────────────────────────── */
+    .agents-section { padding: 0 0 80px; }
+
+    .agents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .agent-card {
+      background: var(--bg-2);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--r-lg);
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform var(--ease), border-color var(--ease), box-shadow var(--ease);
+    }
+
+    .agent-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--gold);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 20px rgba(201,162,39,0.1);
+    }
+
+    .agent-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--r);
+      overflow: hidden;
+      background: var(--bg-3);
+      border: 1px solid var(--gold-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+    }
+
+    .agent-logo img { width: 100%; height: 100%; object-fit: cover; }
+
+    .agent-name {
+      font-family: var(--serif);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .agent-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 0.8rem;
+      color: var(--text-3);
+    }
+
+    .agent-stat-num { color: var(--gold); font-weight: 600; }
+
+    .agent-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-border);
+      color: var(--gold);
+      padding: 9px 18px;
+      border-radius: 100px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-family: var(--sans);
+      font-weight: 500;
+      text-decoration: none;
+      transition: all var(--ease);
+      margin-top: auto;
+    }
+
+    .agent-btn:hover { background: var(--gold); color: var(--bg-0); }
+
+    .agents-empty {
+      text-align: center;
+      color: var(--text-3);
+      padding: 48px 24px;
+      border: 1px dashed var(--gold-border);
+      border-radius: var(--r-lg);
+      font-size: 0.95rem;
+      line-height: 1.8;
+      grid-column: 1 / -1;
+    }
   </style>
 </head>
 <body>
@@ -931,6 +1081,34 @@
       <div class="container">
         <button class="back-btn" onclick="showSelector()">&#8592; Back to Moods</button>
         <div id="result-content"></div>
+      </div>
+    </section>
+
+    <!-- Section: Japan Map Explorer -->
+    <section id="section-map" class="map-section">
+      <div class="container">
+        <div class="section-divider"></div>
+        <div class="section-header">
+          <div class="section-eyebrow">JAPAN MAP EXPLORER</div>
+          <h2 class="section-title">Explore the Land of the Rising Sun</h2>
+          <p class="section-subtitle">Click any destination to discover hidden gems</p>
+        </div>
+        <div class="map-wrapper">
+          <div id="tomodachi-map"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Travel Agents -->
+    <section id="section-agents" class="agents-section">
+      <div class="container">
+        <div class="section-divider"></div>
+        <div class="section-header">
+          <div class="section-eyebrow">TRAVEL AGENTS</div>
+          <h2 class="section-title">Our Partner Travel Agents</h2>
+          <p class="section-subtitle">Expert Japan specialists ready to plan your trip</p>
+        </div>
+        <div id="agents-grid" class="agents-grid"></div>
       </div>
     </section>
 
@@ -1246,6 +1424,73 @@
     document.getElementById('chat-field').addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
     });
+
+    // ── Japan Map Explorer ───────────────────────────────────────
+    const DESTINATIONS = [
+      { coords: [139.6917, 35.6895], city: 'Tokyo',     tag: 'The beating heart of Japan' },
+      { coords: [135.5023, 34.6937], city: 'Osaka',     tag: 'Food capital of Japan' },
+      { coords: [135.7681, 35.0116], city: 'Kyoto',     tag: 'Ancient temples & geisha' },
+      { coords: [132.4553, 34.3853], city: 'Hiroshima', tag: 'Peace & resilience' },
+      { coords: [141.3469, 43.0618], city: 'Sapporo',   tag: 'Snow & fresh seafood' },
+      { coords: [130.4017, 33.5904], city: 'Fukuoka',   tag: 'Gateway to Kyushu' },
+      { coords: [127.6811, 26.2124], city: 'Naha',      tag: 'Tropical Okinawa vibes' },
+      { coords: [139.5999, 36.7198], city: 'Nikko',     tag: 'Hidden mountain shrines' },
+      { coords: [136.6256, 36.5944], city: 'Kanazawa',  tag: 'Little Kyoto' },
+    ];
+
+    async function initMap() {
+      try {
+        const cfg = await fetch('/api/config').then(r => r.json());
+        if (!cfg.mapboxToken) return;
+        mapboxgl.accessToken = cfg.mapboxToken;
+        const map = new mapboxgl.Map({
+          container: 'tomodachi-map',
+          style:     'mapbox://styles/mapbox/dark-v11',
+          center:    [136.5, 36.5],
+          zoom:      5
+        });
+        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        DESTINATIONS.forEach(d => {
+          const el = document.createElement('div');
+          el.className = 'map-marker';
+          const popup = new mapboxgl.Popup({ offset: 14, closeButton: true })
+            .setHTML(`<strong style="color:#c9a84c">${esc(d.city)}</strong><br><span style="color:#9898b8;font-size:0.78rem">${esc(d.tag)}</span>`);
+          new mapboxgl.Marker(el).setLngLat(d.coords).setPopup(popup).addTo(map);
+        });
+      } catch (e) {
+        document.getElementById('section-map').style.display = 'none';
+      }
+    }
+
+    // ── Travel Agents ────────────────────────────────────────────
+    async function loadAgents() {
+      const grid = document.getElementById('agents-grid');
+      try {
+        const agents = await fetch('/api/agents/public').then(r => r.json());
+        if (!Array.isArray(agents) || !agents.length) {
+          grid.innerHTML = `<div class="agents-empty">Partner agents coming soon.<br>Contact us to become a partner.</div>`;
+          return;
+        }
+        grid.innerHTML = agents.map(a => `
+          <div class="agent-card">
+            <div class="agent-logo">
+              ${a.logo ? `<img src="${esc(a.logo)}" alt="${esc(a.name)}">` : '🏢'}
+            </div>
+            <div class="agent-name">${esc(a.name)}</div>
+            <div class="agent-stats">
+              <span><span class="agent-stat-num">${a.packageCount}</span> packages</span>
+              <span><span class="agent-stat-num">${a.hotelCount}</span> hotels</span>
+            </div>
+            <a class="agent-btn" href="/${esc(a.slug)}">View Packages →</a>
+          </div>
+        `).join('');
+      } catch (e) {
+        grid.innerHTML = `<div class="agents-empty">Unable to load agents right now.</div>`;
+      }
+    }
+
+    initMap();
+    loadAgents();
   </script>
 </body>
 </html>

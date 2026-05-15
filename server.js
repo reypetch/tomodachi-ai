@@ -138,6 +138,32 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// ── Public config ──────────────────────────────────────────────
+app.get('/api/config', (req, res) => {
+  res.json({ mapboxToken: process.env.MAPBOX_TOKEN || '' });
+});
+
+app.get('/api/agents/public', async (req, res) => {
+  try {
+    const { getAgents } = require('./lib/db');
+    const agents = await getAgents();
+    res.json(
+      agents
+        .filter(a => a.status === 'active')
+        .map(a => ({
+          slug:         a.slug,
+          name:         a.name,
+          logo:         a.logo,
+          whatsapp:     a.whatsapp,
+          packageCount: (a.packages || []).length,
+          hotelCount:   (a.hotels   || []).length
+        }))
+    );
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── B2B routes ─────────────────────────────────────────────────
 app.use('/admin', require('./routes/admin'));
 app.use('/agent', require('./routes/agent'));
